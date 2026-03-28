@@ -132,6 +132,10 @@ func (r *EnvironmentGitIntegrationResource) ValidateConfig(ctx context.Context, 
 		return
 	}
 
+	if data.ProjectName.IsUnknown() {
+		return
+	}
+
 	if data.ProjectName.IsNull() || data.ProjectName.ValueString() == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("project_name"),
