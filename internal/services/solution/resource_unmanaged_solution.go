@@ -262,16 +262,13 @@ func (r *UnmanagedSolutionResource) ImportState(ctx context.Context, req resourc
 }
 
 func setUnmanagedSolutionState(model *UnmanagedSolutionResourceModel, solution *SolutionDto) {
+	existingDescription := model.Description
+
 	model.Id = types.StringValue(fmt.Sprintf("%s_%s", model.EnvironmentId.ValueString(), solution.Id))
 	model.UniqueName = types.StringValue(solution.Name)
 	model.DisplayName = types.StringValue(solution.DisplayName)
 	model.PublisherId = types.StringValue(solution.PublisherId)
-
-	if solution.Description == "" {
-		model.Description = types.StringNull()
-	} else {
-		model.Description = types.StringValue(solution.Description)
-	}
+	model.Description = normalizeNullableDescription(solution.Description, existingDescription)
 }
 
 func validateUnmanagedSolution(solution *SolutionDto, typeName string) error {
@@ -284,4 +281,16 @@ func validateUnmanagedSolution(solution *SolutionDto, typeName string) error {
 
 func splitSolutionCompositeID(id string) []string {
 	return strings.Split(id, "_")
+}
+
+func normalizeNullableDescription(value string, existing types.String) types.String {
+	if value != "" {
+		return types.StringValue(value)
+	}
+
+	if !existing.IsNull() && !existing.IsUnknown() && existing.ValueString() == "" {
+		return types.StringValue("")
+	}
+
+	return types.StringNull()
 }

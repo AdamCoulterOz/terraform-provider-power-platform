@@ -391,6 +391,9 @@ func validateAddressSlots(addresses []PublisherAddressModel) (diags diag.Diagnos
 
 func setResourceModelFromDto(model *ResourceModel, environmentId string, publisher *publisherDto) {
 	existingAddresses := model.Address
+	existingDescription := model.Description
+	existingEmailAddress := model.EmailAddress
+	existingSupportingWebsiteURL := model.SupportingWebsiteURL
 
 	model.Id = types.StringValue(buildPublisherResourceId(environmentId, publisher.Id))
 	model.EnvironmentId = types.StringValue(environmentId)
@@ -399,9 +402,9 @@ func setResourceModelFromDto(model *ResourceModel, environmentId string, publish
 	model.FriendlyName = types.StringValue(publisher.FriendlyName)
 	model.CustomizationPrefix = types.StringValue(publisher.CustomizationPrefix)
 	model.CustomizationOptionValuePrefix = types.Int64Value(publisher.CustomizationOptionValuePrefix)
-	model.Description = nullableStringValue(publisher.Description)
-	model.EmailAddress = nullableStringValue(publisher.EmailAddress)
-	model.SupportingWebsiteURL = nullableStringValue(publisher.SupportingWebsiteURL)
+	model.Description = normalizeNullableConfigString(publisher.Description, existingDescription)
+	model.EmailAddress = normalizeNullableConfigString(publisher.EmailAddress, existingEmailAddress)
+	model.SupportingWebsiteURL = normalizeNullableConfigString(publisher.SupportingWebsiteURL, existingSupportingWebsiteURL)
 	model.IsReadOnly = types.BoolValue(publisher.IsReadOnly)
 	model.Address = addressModelsFromDto(publisher, existingAddresses)
 }
@@ -456,18 +459,21 @@ func publisherBodyFromModel(model *ResourceModel) map[string]any {
 func addressModelsFromDto(publisher *publisherDto, existing []PublisherAddressModel) []PublisherAddressModel {
 	var addresses []PublisherAddressModel
 
-	if address1 := addressModelFromDto(1, publisher); address1 != nil {
+	if address1 := addressModelFromDtoWithExisting(1, publisher, findAddressBySlot(existing, 1)); address1 != nil {
 		if !isPlaceholderAddressModel(*address1) || hasAddressSlot(existing, 1) {
 			addresses = append(addresses, *address1)
 		}
 	}
-	if address2 := addressModelFromDto(2, publisher); address2 != nil {
+	if address2 := addressModelFromDtoWithExisting(2, publisher, findAddressBySlot(existing, 2)); address2 != nil {
 		if !isPlaceholderAddressModel(*address2) || hasAddressSlot(existing, 2) {
 			addresses = append(addresses, *address2)
 		}
 	}
 
 	if len(addresses) == 0 {
+		if existing != nil {
+			return []PublisherAddressModel{}
+		}
 		return nil
 	}
 
@@ -475,6 +481,10 @@ func addressModelsFromDto(publisher *publisherDto, existing []PublisherAddressMo
 }
 
 func addressModelFromDto(slot int64, publisher *publisherDto) *PublisherAddressModel {
+	if publisher == nil {
+		return nil
+	}
+
 	model := PublisherAddressModel{
 		Slot: types.Int64Value(slot),
 	}
@@ -557,6 +567,31 @@ func addressModelFromDto(slot int64, publisher *publisherDto) *PublisherAddressM
 	return &model
 }
 
+func addressModelFromDtoWithExisting(slot int64, publisher *publisherDto, existing *PublisherAddressModel) *PublisherAddressModel {
+	model := addressModelFromDto(slot, publisher)
+	if model == nil || existing == nil {
+		return model
+	}
+
+	model.City = normalizeNullableConfigStringValue(model.City, existing.City)
+	model.Country = normalizeNullableConfigStringValue(model.Country, existing.Country)
+	model.County = normalizeNullableConfigStringValue(model.County, existing.County)
+	model.Fax = normalizeNullableConfigStringValue(model.Fax, existing.Fax)
+	model.Line1 = normalizeNullableConfigStringValue(model.Line1, existing.Line1)
+	model.Line2 = normalizeNullableConfigStringValue(model.Line2, existing.Line2)
+	model.Line3 = normalizeNullableConfigStringValue(model.Line3, existing.Line3)
+	model.Name = normalizeNullableConfigStringValue(model.Name, existing.Name)
+	model.PostalCode = normalizeNullableConfigStringValue(model.PostalCode, existing.PostalCode)
+	model.PostOfficeBox = normalizeNullableConfigStringValue(model.PostOfficeBox, existing.PostOfficeBox)
+	model.StateOrProvince = normalizeNullableConfigStringValue(model.StateOrProvince, existing.StateOrProvince)
+	model.Telephone1 = normalizeNullableConfigStringValue(model.Telephone1, existing.Telephone1)
+	model.Telephone2 = normalizeNullableConfigStringValue(model.Telephone2, existing.Telephone2)
+	model.Telephone3 = normalizeNullableConfigStringValue(model.Telephone3, existing.Telephone3)
+	model.UpsZone = normalizeNullableConfigStringValue(model.UpsZone, existing.UpsZone)
+
+	return model
+}
+
 func hasAddressSlot(addresses []PublisherAddressModel, slot int64) bool {
 	for _, address := range addresses {
 		if address.Slot.IsNull() || address.Slot.IsUnknown() {
@@ -567,6 +602,18 @@ func hasAddressSlot(addresses []PublisherAddressModel, slot int64) bool {
 		}
 	}
 	return false
+}
+
+func findAddressBySlot(addresses []PublisherAddressModel, slot int64) *PublisherAddressModel {
+	for idx := range addresses {
+		if addresses[idx].Slot.IsNull() || addresses[idx].Slot.IsUnknown() {
+			continue
+		}
+		if addresses[idx].Slot.ValueInt64() == slot {
+			return &addresses[idx]
+		}
+	}
+	return nil
 }
 
 func isPlaceholderAddressModel(model PublisherAddressModel) bool {
@@ -641,6 +688,30 @@ func nullableStringValue(value string) types.String {
 		return types.StringNull()
 	}
 	return types.StringValue(value)
+}
+
+func normalizeNullableConfigString(value string, existing types.String) types.String {
+	if value != "" {
+		return types.StringValue(value)
+	}
+
+	if !existing.IsNull() && !existing.IsUnknown() && existing.ValueString() == "" {
+		return types.StringValue("")
+	}
+
+	return types.StringNull()
+}
+
+func normalizeNullableConfigStringValue(value types.String, existing types.String) types.String {
+	if !value.IsNull() {
+		return value
+	}
+
+	if !existing.IsNull() && !existing.IsUnknown() && existing.ValueString() == "" {
+		return types.StringValue("")
+	}
+
+	return types.StringNull()
 }
 
 func nullableInt64Value(value *int64) types.Int64 {

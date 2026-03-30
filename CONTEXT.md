@@ -42,6 +42,8 @@ Recent publisher work on this branch adds:
 - Dataverse CRUD against `/api/data/v9.2/publishers`
 - Provider registration, examples, tests, and docs generation inputs
 - The publisher mapper now ignores Dataverse placeholder address slots that only contain internal/default values unless that slot was already tracked in Terraform state, which avoids `Provider produced inconsistent result after apply` when configuration omits `address`.
+- The publisher mapper also preserves explicit empty-string optional fields and explicit empty `address` configuration, avoiding additional empty-vs-null drift after create/update.
+- The unmanaged solution resource now preserves an explicitly configured empty-string `description` instead of normalizing it to `null`, which avoids `Provider produced inconsistent result after apply` during create/update.
 
 ## Publisher design notes
 

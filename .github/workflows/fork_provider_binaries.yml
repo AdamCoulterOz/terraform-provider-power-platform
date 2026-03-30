@@ -7,7 +7,7 @@ on:
       version:
         description: Temporary provider version to stamp into the binaries and asset names.
         required: true
-        default: "4.1.1-adam-preview.2"
+        default: "4.1.1-adam-preview.3"
       publish_release:
         description: Publish the built artifacts to a GitHub prerelease in this fork.
         required: true
