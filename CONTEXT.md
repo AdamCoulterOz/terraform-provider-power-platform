@@ -24,9 +24,18 @@ This repository contains the Microsoft Terraform provider for Power Platform. It
 
 ## Current branch state
 
-Branch: `codex/powerplatform-publisher-resource-datasource`
+Branch: `codex/git-integration-binary-pipeline`
 
-Current work on this branch adds a new typed Dataverse publisher feature:
+Current work on this branch combines the forked provider binary pipeline with several in-flight product features:
+
+- temporary GitHub Actions workflow for building forked provider binaries for Azure DevOps pipeline consumption
+- git integration resources under `internal/services/git_integration`
+- unmanaged solution resource and data source under `internal/services/solution`
+- typed Dataverse publisher resource and data source under `internal/services/publisher`
+
+The fork-binary workflow currently stamps preview builds with an `adam-preview` version suffix so generated archives and prerelease tags are distinct from the earlier `gitintegration` builds.
+
+Recent publisher work on this branch adds:
 
 - `powerplatform_publisher` resource
 - `powerplatform_publisher` data source
