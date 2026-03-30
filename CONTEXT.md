@@ -41,6 +41,7 @@ Recent publisher work on this branch adds:
 - `powerplatform_publisher` data source
 - Dataverse CRUD against `/api/data/v9.2/publishers`
 - Provider registration, examples, tests, and docs generation inputs
+- The publisher mapper now ignores Dataverse placeholder address slots that only contain internal/default values unless that slot was already tracked in Terraform state, which avoids `Provider produced inconsistent result after apply` when configuration omits `address`.
 
 ## Publisher design notes
 

@@ -390,6 +390,8 @@ func validateAddressSlots(addresses []PublisherAddressModel) (diags diag.Diagnos
 }
 
 func setResourceModelFromDto(model *ResourceModel, environmentId string, publisher *publisherDto) {
+	existingAddresses := model.Address
+
 	model.Id = types.StringValue(buildPublisherResourceId(environmentId, publisher.Id))
 	model.EnvironmentId = types.StringValue(environmentId)
 	model.PublisherId = types.StringValue(publisher.Id)
@@ -401,7 +403,7 @@ func setResourceModelFromDto(model *ResourceModel, environmentId string, publish
 	model.EmailAddress = nullableStringValue(publisher.EmailAddress)
 	model.SupportingWebsiteURL = nullableStringValue(publisher.SupportingWebsiteURL)
 	model.IsReadOnly = types.BoolValue(publisher.IsReadOnly)
-	model.Address = addressModelsFromDto(publisher)
+	model.Address = addressModelsFromDto(publisher, existingAddresses)
 }
 
 func publisherBodyFromModel(model *ResourceModel) map[string]any {
@@ -451,14 +453,22 @@ func publisherBodyFromModel(model *ResourceModel) map[string]any {
 	return body
 }
 
-func addressModelsFromDto(publisher *publisherDto) []PublisherAddressModel {
-	addresses := make([]PublisherAddressModel, 0, 2)
+func addressModelsFromDto(publisher *publisherDto, existing []PublisherAddressModel) []PublisherAddressModel {
+	var addresses []PublisherAddressModel
 
 	if address1 := addressModelFromDto(1, publisher); address1 != nil {
-		addresses = append(addresses, *address1)
+		if !isPlaceholderAddressModel(*address1) || hasAddressSlot(existing, 1) {
+			addresses = append(addresses, *address1)
+		}
 	}
 	if address2 := addressModelFromDto(2, publisher); address2 != nil {
-		addresses = append(addresses, *address2)
+		if !isPlaceholderAddressModel(*address2) || hasAddressSlot(existing, 2) {
+			addresses = append(addresses, *address2)
+		}
+	}
+
+	if len(addresses) == 0 {
+		return nil
 	}
 
 	return addresses
@@ -540,8 +550,36 @@ func addressModelFromDto(slot int64, publisher *publisherDto) *PublisherAddressM
 		return nil
 	}
 
-	if model.AddressTypeCode.IsNull() &&
-		model.City.IsNull() &&
+	if isAddressContentEmpty(model) && model.AddressTypeCode.IsNull() && model.ShippingMethodCode.IsNull() {
+		return nil
+	}
+
+	return &model
+}
+
+func hasAddressSlot(addresses []PublisherAddressModel, slot int64) bool {
+	for _, address := range addresses {
+		if address.Slot.IsNull() || address.Slot.IsUnknown() {
+			continue
+		}
+		if address.Slot.ValueInt64() == slot {
+			return true
+		}
+	}
+	return false
+}
+
+func isPlaceholderAddressModel(model PublisherAddressModel) bool {
+	if !isAddressContentEmpty(model) {
+		return false
+	}
+
+	return isDefaultOrNullInt64(model.AddressTypeCode, 1) &&
+		isDefaultOrNullInt64(model.ShippingMethodCode, 1)
+}
+
+func isAddressContentEmpty(model PublisherAddressModel) bool {
+	return model.City.IsNull() &&
 		model.Country.IsNull() &&
 		model.County.IsNull() &&
 		model.Fax.IsNull() &&
@@ -553,17 +591,16 @@ func addressModelFromDto(slot int64, publisher *publisherDto) *PublisherAddressM
 		model.Name.IsNull() &&
 		model.PostalCode.IsNull() &&
 		model.PostOfficeBox.IsNull() &&
-		model.ShippingMethodCode.IsNull() &&
 		model.StateOrProvince.IsNull() &&
 		model.Telephone1.IsNull() &&
 		model.Telephone2.IsNull() &&
 		model.Telephone3.IsNull() &&
 		model.UpsZone.IsNull() &&
-		model.UtcOffset.IsNull() {
-		return nil
-	}
+		model.UtcOffset.IsNull()
+}
 
-	return &model
+func isDefaultOrNullInt64(value types.Int64, defaultValue int64) bool {
+	return value.IsNull() || (!value.IsUnknown() && value.ValueInt64() == defaultValue)
 }
 
 func getPublisherId(resourceId string) string {
