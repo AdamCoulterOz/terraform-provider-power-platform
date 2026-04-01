@@ -43,6 +43,7 @@ Recent publisher work on this branch adds:
 - Provider registration, examples, tests, and docs generation inputs
 - The publisher mapper now ignores Dataverse placeholder address slots that only contain internal/default values unless that slot was already tracked in Terraform state, which avoids `Provider produced inconsistent result after apply` when configuration omits `address`.
 - The publisher mapper also preserves explicit empty-string optional fields and explicit empty `address` configuration, avoiding additional empty-vs-null drift after create/update.
+- `customization_option_value_prefix` is now intended to be optional on the resource, with the provider deriving the default value using the same hash algorithm used by the Power Apps publisher UI when the field is omitted.
 - The unmanaged solution resource now preserves an explicitly configured empty-string `description` instead of normalizing it to `null`, which avoids `Provider produced inconsistent result after apply` during create/update.
 
 ## Publisher design notes
