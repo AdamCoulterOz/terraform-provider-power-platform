@@ -38,6 +38,10 @@
 - `codex/fix-environment-security-group-update`
   - clean bugfix branch cut from `upstream/main`
   - fixes environment update behavior so non-Developer environment updates preserve the planned `dataverse.security_group_id`
+- `codex/user-refresh-missing-environment`
+  - clean bugfix branch cut from `upstream/main`
+  - fixes `powerplatform_user` refresh and delete behavior when the parent environment no longer exists
+  - treats `EnvironmentNotFound` as resource disappearance instead of surfacing a provider error
 
 ## Release path used by shared Azure Pipelines
 
@@ -71,3 +75,25 @@
   - preserve the planned `dataverse.security_group_id` during non-Developer updates
 - Verified locally with:
   - `go test ./internal/services/environment/...`
+
+## User refresh missing environment bugfix
+
+- Existing `powerplatform_user` read and delete logic in:
+  - `internal/services/authorization/resource_user.go`
+- Pre-fix behavior:
+  - `EnvironmentHasDataverse(...)` returned `customerrors.ErrObjectNotFound` when the parent environment had been deleted
+  - the resource surfaced that as a provider error during refresh
+  - Terraform could not converge by removing the missing `powerplatform_user` from state
+- Fix:
+  - treat missing parent environments as resource disappearance
+  - `Read` removes the resource from state
+  - `Delete` exits cleanly when the parent environment is already gone
+- Verified locally with:
+  - unit coverage in `internal/services/authorization/resource_user_test.go`
+
+## Current bugfix coordination
+
+- Two separate bug reports are needed before opening PRs:
+  - environment security group update
+  - user refresh when parent environment is missing
+- Each bugfix should stay isolated to its own branch, issue, and PR.
