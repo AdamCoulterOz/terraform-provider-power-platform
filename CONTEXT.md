@@ -34,14 +34,15 @@
 
 - `codex/preview-integration`
   - working integration branch used to build forked preview binaries for Azure DevOps pipeline consumption
-  - carries in-flight work around git integration resources, unmanaged solutions, and publishers
-- `codex/fix-environment-security-group-update`
-  - clean bugfix branch cut from `upstream/main`
-  - fixes environment update behavior so non-Developer environment updates preserve the planned `dataverse.security_group_id`
-- `codex/user-refresh-missing-environment`
-  - clean bugfix branch cut from `upstream/main`
-  - fixes `powerplatform_user` refresh and delete behavior when the parent environment no longer exists
-  - treats `EnvironmentNotFound` as resource disappearance instead of surfacing a provider error
+  - now contains the previously separate local branch work from:
+    - `main`
+    - `codex/fix-environment-security-group-update`
+    - `codex/git-integration-design`
+    - `codex/powerplatform-publisher-resource-datasource`
+    - `codex/user-refresh-missing-environment`
+    - `unmanaged_solution`
+  - local merge consolidation completed on 2026-04-03
+  - `git branch --no-merged codex/preview-integration` returned no remaining local branches after consolidation
 
 ## Release path used by shared Azure Pipelines
 
@@ -56,9 +57,14 @@
 - `powerplatform_publisher` resource and data source
 - Dataverse CRUD against `/api/data/v9.2/publishers`
 - unmanaged solution resource/data source work
+- git integration review cleanup and extra internal validation coverage
 - publisher mapping fixes for placeholder address values and explicit empty-string handling
 - derived default `customization_option_value_prefix`
+- publisher friendly-name case-only drift handling
+- publisher numeric prefix preservation after create
 - unmanaged solution description handling that preserves explicit empty strings
+- environment security group update fix for non-Developer environments
+- `powerplatform_user` handling when the parent environment no longer exists
 
 ## Security group update bugfix
 
@@ -93,7 +99,5 @@
 
 ## Current bugfix coordination
 
-- Two separate bug reports are needed before opening PRs:
-  - environment security group update
-  - user refresh when parent environment is missing
-- Each bugfix should stay isolated to its own branch, issue, and PR.
+- The isolated bugfix branches still exist locally for clean PR slicing if needed.
+- Their commits are also present on `codex/preview-integration` after the 2026-04-03 local merge consolidation.
