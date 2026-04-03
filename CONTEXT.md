@@ -49,8 +49,10 @@
 - Forked preview binaries are published from:
   - `.github/workflows/fork_provider_binaries.yml`
 - Preview assets are released as GitHub prereleases with tags like:
-  - `fork-v4.1.1-adam-preview.6`
+  - `fork-v4.1.1-adam-preview.8`
 - Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
+- The current workflow-dispatch default version in the fork binary workflow is:
+  - `4.1.1-adam-preview.8`
 
 ## Recent provider work carried on preview branches
 
