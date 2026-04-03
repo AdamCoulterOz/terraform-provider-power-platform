@@ -1,60 +1,73 @@
-# Project Context
+# Context
 
 ## Repository purpose
 
-This repository contains the Microsoft Terraform provider for Power Platform. It is implemented with the Terraform Plugin Framework and manages Power Platform and Dataverse resources through a mix of Power Platform admin APIs, BAPI endpoints, and Dataverse Web API calls.
+- Terraform provider for Microsoft Power Platform and Dataverse.
+- Implemented with the Terraform Plugin Framework.
+- Manages environments, solutions, publishers, users, connections, and related Power Platform resources through Power Platform admin APIs, BAPI, and Dataverse Web API.
 
 ## High-level structure
 
-- `internal/provider`: provider schema, authentication wiring, and registration of all resources and data sources.
-- `internal/services/<service>`: one package per feature area, usually containing API client code, Terraform schema/model code, and tests.
-- `internal/api`: shared HTTP execution, retry handling, authentication, and response helpers.
-- `internal/helpers`: URL builders, request context helpers, config fallbacks, and common utility code.
-- `examples`: example Terraform configurations used by docs generation.
-- `docs` and `templates`: generated/provider docs and tfplugindocs templates.
-- `.changes`: changelog material managed with Changie.
+- `internal/provider`
+  - provider schema, authentication wiring, and registration of resources and data sources
+- `internal/services/<service>`
+  - feature-specific Terraform resources, data sources, DTOs, API calls, and tests
+- `internal/api`
+  - shared HTTP execution, retry handling, auth, and response helpers
+- `internal/helpers`
+  - common utility code, request context helpers, and config glue
+- `examples`, `docs`, `templates`
+  - examples and generated/provider documentation inputs
+- `.changes`
+  - changelog material managed with Changie
 
 ## Working conventions
 
-- New functionality is typically introduced as a new package under `internal/services/<name>`.
-- Provider registration must be updated in `internal/provider/provider.go`.
-- Unit tests use `httpmock` together with `internal/mocks`.
-- Documentation is generated from schema descriptions and examples via `go generate` / `make userdocs`.
-- The repo currently uses `main` as the primary branch, which matches local project instructions.
+- New functionality usually lives under `internal/services/<name>`.
+- Provider registration changes go through `internal/provider/provider.go`.
+- Unit tests use `httpmock` plus `internal/mocks`.
+- Docs are generated from schema descriptions and examples.
+- Primary branch naming is `main`.
+- Merge strategy should remain fast-forward or merge commit only. Never rebase.
 
 ## Current branch state
 
-Branch: `codex/git-integration-binary-pipeline`
+- `codex/preview-integration`
+  - working integration branch used to build forked preview binaries for Azure DevOps pipeline consumption
+  - carries in-flight work around git integration resources, unmanaged solutions, and publishers
+- `codex/fix-environment-security-group-update`
+  - clean bugfix branch cut from `upstream/main`
+  - fixes environment update behavior so non-Developer environment updates preserve the planned `dataverse.security_group_id`
 
-Current work on this branch combines the forked provider binary pipeline with several in-flight product features:
+## Release path used by shared Azure Pipelines
 
-- temporary GitHub Actions workflow for building forked provider binaries for Azure DevOps pipeline consumption
-- git integration resources under `internal/services/git_integration`
-- unmanaged solution resource and data source under `internal/services/solution`
-- typed Dataverse publisher resource and data source under `internal/services/publisher`
+- Forked preview binaries are published from:
+  - `.github/workflows/fork_provider_binaries.yml`
+- Preview assets are released as GitHub prereleases with tags like:
+  - `fork-v4.1.1-adam-preview.6`
+- Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
 
-The fork-binary workflow currently stamps preview builds with an `adam-preview` version suffix so generated archives and prerelease tags are distinct from the earlier `gitintegration` builds.
+## Recent provider work carried on preview branches
 
-Recent publisher work on this branch adds:
-
-- `powerplatform_publisher` resource
-- `powerplatform_publisher` data source
+- `powerplatform_publisher` resource and data source
 - Dataverse CRUD against `/api/data/v9.2/publishers`
-- Provider registration, examples, tests, and docs generation inputs
-- The publisher mapper now ignores Dataverse placeholder address slots that only contain internal/default values unless that slot was already tracked in Terraform state, which avoids `Provider produced inconsistent result after apply` when configuration omits `address`.
-- The publisher mapper also preserves explicit empty-string optional fields and explicit empty `address` configuration, avoiding additional empty-vs-null drift after create/update.
-- `customization_option_value_prefix` is now intended to be optional on the resource, with the provider deriving the default value using the same hash algorithm used by the Power Apps publisher UI when the field is omitted.
-- The unmanaged solution resource now preserves an explicitly configured empty-string `description` instead of normalizing it to `null`, which avoids `Provider produced inconsistent result after apply` during create/update.
+- unmanaged solution resource/data source work
+- publisher mapping fixes for placeholder address values and explicit empty-string handling
+- derived default `customization_option_value_prefix`
+- unmanaged solution description handling that preserves explicit empty strings
 
-## Publisher design notes
+## Security group update bugfix
 
-- Resource `id` is now the raw Dataverse `publisherid`. Imports still accept the composite token `<environment_id>_<publisher_id>` so environment scoping can be supplied during import without storing that composite string as state identity.
-- The schema uses explicit top-level publisher fields for core publisher metadata.
-- Addresses are modeled as a repeated child `address` structure with up to two entries, mapped to Dataverse `address1_*` and `address2_*` fields.
-- The data source supports lookup by either `id` or `uniquename`.
-
-## Open assumptions
-
-- The current publisher schema covers the core publisher metadata plus the full mutable address surface. It does not yet expose every non-address property on the Dataverse publisher entity.
-- `uniquename` is treated as replacement-only because it behaves like a stable identity field.
-- Optional fields are cleared on update by sending `null` values to Dataverse for omitted attributes.
+- Existing environment update logic in:
+  - `internal/services/environment/resource_environment.go`
+  - function `updateExistingDataverse(...)`
+- The pre-fix behavior nullified `LinkedEnvironmentMetadata.SecurityGroupId` for non-Developer environments during update.
+- Result:
+  - Terraform planned a security-group change
+  - provider update request dropped that value
+  - post-apply read still returned the old group id
+  - Terraform failed with `Provider produced inconsistent result after apply`
+- Fix:
+  - preserve the planned `dataverse.security_group_id` during non-Developer updates
+- Verified locally with:
+  - `go test ./internal/services/environment/...`
