@@ -49,7 +49,7 @@ func (r *SolutionGitBranchResource) Schema(ctx context.Context, req resource.Sch
 	defer exitContext()
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a solution-level Dataverse Git branch binding. This maps to the documented `sourcecontrolbranchconfiguration` Dataverse table and links a solution partition to a branch and folder beneath an environment Git integration.",
+		MarkdownDescription: "Manages a solution-level Dataverse Git branch binding. This maps to the documented `sourcecontrolbranchconfiguration` Dataverse table and links a solution partition to a branch and folder beneath an environment Git integration.\n\nKnown limitation: the underlying Power Platform Git integration bootstrap currently requires delegated user principal authentication with Azure DevOps access. Service principal, app-only, and OIDC pipeline identities are not currently supported by the backing Dataverse Git integration flow.",
 		Attributes: map[string]schema.Attribute{
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
 				Create: true,
@@ -265,7 +265,7 @@ func (r *SolutionGitBranchResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	if err := r.GitIntegrationClient.DeleteSolutionGitBranch(ctx, state.EnvironmentID.ValueString(), state.ID.ValueString(), state.GitIntegrationID.ValueString(), solutionID); err != nil {
+	if err := r.GitIntegrationClient.DeleteSolutionGitBranch(ctx, state.EnvironmentID.ValueString(), state.GitIntegrationID.ValueString(), solutionID); err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when deleting %s", r.FullTypeName()), err.Error())
 	}
 }

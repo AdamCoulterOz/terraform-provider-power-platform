@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
@@ -163,7 +164,21 @@ func normalizeSolutionID(environmentID, configuredValue string) (string, error) 
 		return "", fmt.Errorf("the `solution_id` value `%s` must be the `id` exported by `powerplatform_solution` for environment `%s`", configuredValue, environmentID)
 	}
 
-	if environmentPrefix != environmentID {
+	parsedEnvironmentPrefix, err := uuid.Parse(environmentPrefix)
+	if err != nil {
+		return "", fmt.Errorf("the `solution_id` value `%s` must use a valid environment GUID prefix", configuredValue)
+	}
+
+	if _, err := uuid.Parse(solutionID); err != nil {
+		return "", fmt.Errorf("the `solution_id` value `%s` must use a valid Dataverse solution GUID suffix", configuredValue)
+	}
+
+	parsedEnvironmentID, err := uuid.Parse(environmentID)
+	if err != nil {
+		return "", fmt.Errorf("the `environment_id` value `%s` must be a valid environment GUID", environmentID)
+	}
+
+	if parsedEnvironmentPrefix.String() != parsedEnvironmentID.String() {
 		return "", fmt.Errorf("the `solution_id` value `%s` uses environment `%s`, but this resource is targeting environment `%s`", configuredValue, environmentPrefix, environmentID)
 	}
 

@@ -51,7 +51,7 @@ func (r *EnvironmentGitIntegrationResource) Schema(ctx context.Context, req reso
 	defer exitContext()
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages the environment-level Dataverse Git repository binding. This maps to the documented `sourcecontrolconfiguration` Dataverse table and stores the repository connection metadata for an environment.",
+		MarkdownDescription: "Manages the environment-level Dataverse Git repository binding. This maps to the documented `sourcecontrolconfiguration` Dataverse table and stores the repository connection metadata for an environment.\n\nKnown limitation: the underlying Power Platform Git integration bootstrap currently requires delegated user principal authentication with Azure DevOps access. Service principal, app-only, and OIDC pipeline identities are not currently supported by the backing Dataverse Git integration flow.",
 		Attributes: map[string]schema.Attribute{
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
 				Create: true,
@@ -188,7 +188,7 @@ func (r *EnvironmentGitIntegrationResource) Create(ctx context.Context, req reso
 	}
 
 	if plan.Scope.ValueString() == scopeEnvironment {
-		if err := r.GitIntegrationClient.EnsureSolutionScopeRootBranch(ctx, plan.EnvironmentID.ValueString(), created.ID, created.OrganizationName, created.ProjectName, created.RepositoryName); err != nil {
+		if err := r.GitIntegrationClient.EnsureRootBranchConfiguration(ctx, plan.EnvironmentID.ValueString(), created.ID, created.OrganizationName, created.ProjectName, created.RepositoryName); err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("Client error when creating the root Git binding for %s", r.FullTypeName()), err.Error())
 			return
 		}
@@ -281,7 +281,7 @@ func (r *EnvironmentGitIntegrationResource) Update(ctx context.Context, req reso
 	}
 
 	if plan.Scope.ValueString() == scopeEnvironment {
-		if err := r.GitIntegrationClient.EnsureSolutionScopeRootBranch(ctx, plan.EnvironmentID.ValueString(), updated.ID, updated.OrganizationName, updated.ProjectName, updated.RepositoryName); err != nil {
+		if err := r.GitIntegrationClient.EnsureRootBranchConfiguration(ctx, plan.EnvironmentID.ValueString(), updated.ID, updated.OrganizationName, updated.ProjectName, updated.RepositoryName); err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("Client error when creating the root Git binding for %s", r.FullTypeName()), err.Error())
 			return
 		}

@@ -136,7 +136,7 @@ func (c *client) WaitForEnvironmentGitIntegrationReady(ctx context.Context, envi
 	}
 }
 
-func (c *client) EnsureSolutionScopeRootBranch(ctx context.Context, environmentID, configurationID, organizationName, projectName, repositoryName string) error {
+func (c *client) EnsureRootBranchConfiguration(ctx context.Context, environmentID, configurationID, organizationName, projectName, repositoryName string) error {
 	defaultBranch, err := c.GetGitRepositoryDefaultBranch(ctx, environmentID, organizationName, projectName, repositoryName)
 	if err != nil {
 		return err
@@ -198,12 +198,12 @@ func (c *client) UpdateEnvironmentGitIntegration(ctx context.Context, environmen
 }
 
 func (c *client) DeleteEnvironmentGitIntegration(ctx context.Context, environmentID, configurationID string) error {
-	rootBranch, err := c.lookupAnySolutionGitBranchByPartition(ctx, environmentID, configurationID, rootPartitionID)
+	_, err := c.lookupAnySolutionGitBranchByPartition(ctx, environmentID, configurationID, rootPartitionID)
 	if err != nil && !errors.Is(err, customerrors.ErrObjectNotFound) {
 		return err
 	}
 	if err == nil {
-		if err := c.DeleteSolutionGitBranch(ctx, environmentID, rootBranch.ID, configurationID, rootPartitionID); err != nil {
+		if err := c.DeleteSolutionGitBranch(ctx, environmentID, configurationID, rootPartitionID); err != nil {
 			return err
 		}
 	}
@@ -295,7 +295,7 @@ func (c *client) CreateSolutionGitBranch(ctx context.Context, environmentID, sol
 		return nil, err
 	}
 
-	if err := c.EnsureSolutionScopeRootBranch(ctx, environmentID, configurationID, configuration.OrganizationName, configuration.ProjectName, configuration.RepositoryName); err != nil {
+	if err := c.EnsureRootBranchConfiguration(ctx, environmentID, configurationID, configuration.OrganizationName, configuration.ProjectName, configuration.RepositoryName); err != nil {
 		return nil, err
 	}
 
@@ -414,7 +414,7 @@ func (c *client) UpdateSolutionGitBranch(ctx context.Context, environmentID, bra
 	return c.FindSolutionGitBranchByPartition(ctx, environmentID, configurationID, partitionID)
 }
 
-func (c *client) DeleteSolutionGitBranch(ctx context.Context, environmentID, branchID, configurationID, partitionID string) error {
+func (c *client) DeleteSolutionGitBranch(ctx context.Context, environmentID, configurationID, partitionID string) error {
 	existingBranch, err := c.lookupAnySolutionGitBranchByPartition(ctx, environmentID, configurationID, partitionID)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
@@ -424,7 +424,7 @@ func (c *client) DeleteSolutionGitBranch(ctx context.Context, environmentID, bra
 	}
 
 	if existingBranch.StatusCode == sourceControlBranchConfigurationStatusInactive {
-		return c.waitForSolutionGitBranchRemoval(ctx, environmentID, branchID, configurationID, partitionID)
+		return c.waitForSolutionGitBranchRemoval(ctx, environmentID, existingBranch.ID, configurationID, partitionID)
 	}
 
 	environmentHost, err := c.EnvironmentClient.GetEnvironmentHostById(ctx, environmentID)
@@ -432,7 +432,7 @@ func (c *client) DeleteSolutionGitBranch(ctx context.Context, environmentID, bra
 		return err
 	}
 
-	apiURL := helpers.BuildDataverseApiUrl(environmentHost, buildSourceControlBranchConfigurationCompositeKeyPath(branchID, partitionID), nil)
+	apiURL := helpers.BuildDataverseApiUrl(environmentHost, buildSourceControlBranchConfigurationCompositeKeyPath(existingBranch.ID, partitionID), nil)
 	headers := http.Header{}
 	headers.Set("If-Match", "*")
 	resp, err := c.Api.Execute(ctx, nil, http.MethodPatch, apiURL, headers, disableSourceControlBranchConfigurationDto{
@@ -448,7 +448,7 @@ func (c *client) DeleteSolutionGitBranch(ctx context.Context, environmentID, bra
 		return nil
 	}
 
-	return c.waitForSolutionGitBranchRemoval(ctx, environmentID, branchID, configurationID, partitionID)
+	return c.waitForSolutionGitBranchRemoval(ctx, environmentID, existingBranch.ID, configurationID, partitionID)
 }
 
 func (c *client) waitForSolutionGitBranchRemoval(ctx context.Context, environmentID, branchID, configurationID, partitionID string) error {
@@ -758,7 +758,12 @@ func (c *client) GetSourceControlIntegrationScope(ctx context.Context, environme
 		return "", err
 	}
 
-	return sourceControlIntegrationScopeFromOrgDbValue(extractOrgDbOrgSettingValue(orgSettings.OrgDbOrgSettings, "SourceControlIntegrationScope")), nil
+	scope := sourceControlIntegrationScopeFromOrgDbValue(extractOrgDbOrgSettingValue(orgSettings.OrgDbOrgSettings, "SourceControlIntegrationScope"))
+	if scope == "" {
+		return "", fmt.Errorf("source control integration scope for environment `%s` could not be determined from organization settings", environmentID)
+	}
+
+	return scope, nil
 }
 
 func (c *client) SetSourceControlIntegrationScope(ctx context.Context, environmentID, scope string) error {
