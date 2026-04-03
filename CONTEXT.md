@@ -53,6 +53,7 @@
 - Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
 - The current workflow-dispatch default version in the fork binary workflow is:
   - `4.1.1-adam-preview.8`
+- The fork binary workflow now forces JavaScript actions onto Node 24 and uses the same Node 24-capable pinned action SHAs as the rest of the repository.
 
 ## Recent provider work carried on preview branches
 
