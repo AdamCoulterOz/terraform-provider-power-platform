@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	stdpath "path"
 	"regexp"
 	"strings"
 
@@ -33,6 +34,9 @@ import (
 var _ resource.Resource = &Resource{}
 var _ resource.ResourceWithConfigure = &Resource{}
 var _ resource.ResourceWithImportState = &Resource{}
+var _ resource.ResourceWithModifyPlan = &Resource{}
+
+var canonicalGuidRegex = regexp.MustCompile(helpers.GuidRegex)
 
 func NewPublisherResource() resource.Resource {
 	return &Resource{
@@ -222,6 +226,39 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 			},
 		},
 	}
+}
+
+func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
+	defer exitContext()
+
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var config ResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var plan ResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state ResourceModel
+	hasState := !req.State.Raw.IsNull()
+	if hasState {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	setDerivedCustomizationOptionValuePrefix(&plan, &config, &state, hasState)
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -419,7 +456,7 @@ func setResourceModelFromDto(model *ResourceModel, environmentId string, publish
 	model.Id = types.StringValue(publisher.Id)
 	model.EnvironmentId = types.StringValue(environmentId)
 	model.UniqueName = types.StringValue(publisher.UniqueName)
-	model.FriendlyName = types.StringValue(publisher.FriendlyName)
+	model.FriendlyName = normalizeCaseInsensitiveConfigString(publisher.FriendlyName, model.FriendlyName)
 	model.CustomizationPrefix = types.StringValue(publisher.CustomizationPrefix)
 	model.CustomizationOptionValuePrefix = types.Int64Value(publisher.CustomizationOptionValuePrefix)
 	model.Description = normalizeNullableConfigString(publisher.Description, existingDescription)
@@ -675,9 +712,12 @@ func buildPublisherImportId(environmentId, publisherId string) string {
 }
 
 func getPublisherIdFromResponse(resp *api.Response) (string, error) {
-	entityId := resp.HttpResponse.Header.Get("OData-EntityId")
-	if entityId == "" {
-		entityId = resp.HttpResponse.Header.Get("odata-entityid")
+	var entityId string
+	for headerName, values := range resp.HttpResponse.Header {
+		if strings.EqualFold(headerName, "OData-EntityId") && len(values) > 0 {
+			entityId = values[0]
+			break
+		}
 	}
 	if entityId == "" {
 		return "", errors.New("no publisher id returned from the API")
@@ -688,11 +728,18 @@ func getPublisherIdFromResponse(resp *api.Response) (string, error) {
 		return "", err
 	}
 
-	matches := regexp.MustCompile(`[0-9a-fA-F-]{36}`).FindStringSubmatch(parsed.Path)
-	if len(matches) == 0 {
+	entitySegment := stdpath.Base(parsed.Path)
+	publisherId, found := strings.CutPrefix(entitySegment, "publishers(")
+	if !found {
 		return "", errors.New("no publisher id returned from the API")
 	}
-	return matches[0], nil
+
+	publisherId = strings.TrimSuffix(publisherId, ")")
+	if !canonicalGuidRegex.MatchString(publisherId) {
+		return "", errors.New("no publisher id returned from the API")
+	}
+
+	return publisherId, nil
 }
 
 func nullableStringValue(value string) types.String {
@@ -712,6 +759,14 @@ func normalizeNullableConfigString(value string, existing types.String) types.St
 	}
 
 	return types.StringNull()
+}
+
+func normalizeCaseInsensitiveConfigString(value string, existing types.String) types.String {
+	if !existing.IsNull() && !existing.IsUnknown() && strings.EqualFold(value, existing.ValueString()) {
+		return existing
+	}
+
+	return types.StringValue(value)
 }
 
 func normalizeNullableConfigStringValue(value types.String, existing types.String) types.String {
@@ -734,8 +789,34 @@ func effectiveCustomizationOptionValuePrefix(model *ResourceModel) int64 {
 	return deriveCustomizationOptionValuePrefix(model.CustomizationPrefix.ValueString(), model.Id.ValueString())
 }
 
+func setDerivedCustomizationOptionValuePrefix(plan, config, state *ResourceModel, hasState bool) {
+	if !config.CustomizationOptionValuePrefix.IsNull() || config.CustomizationOptionValuePrefix.IsUnknown() {
+		return
+	}
+
+	if hasState && !state.CustomizationOptionValuePrefix.IsNull() && !state.CustomizationOptionValuePrefix.IsUnknown() {
+		plan.CustomizationOptionValuePrefix = state.CustomizationOptionValuePrefix
+		return
+	}
+
+	if plan.CustomizationPrefix.IsNull() || plan.CustomizationPrefix.IsUnknown() {
+		return
+	}
+
+	publisherId := ""
+	if !plan.Id.IsNull() && !plan.Id.IsUnknown() {
+		publisherId = plan.Id.ValueString()
+	} else if hasState && !state.Id.IsNull() && !state.Id.IsUnknown() {
+		publisherId = state.Id.ValueString()
+	}
+
+	plan.CustomizationOptionValuePrefix = types.Int64Value(
+		deriveCustomizationOptionValuePrefix(plan.CustomizationPrefix.ValueString(), publisherId),
+	)
+}
+
 func deriveCustomizationOptionValuePrefix(prefix, publisherId string) int64 {
-	if publisherId == "d21aab71-79e7-11dd-8874-00188b01e34f" {
+	if strings.EqualFold(publisherId, "d21aab71-79e7-11dd-8874-00188b01e34f") {
 		return 10000
 	}
 
@@ -809,5 +890,5 @@ func nullableFloat64Pointer(value types.Float64) *float64 {
 }
 
 func isGuid(value string) bool {
-	return regexp.MustCompile(`^[0-9a-fA-F-]{36}$`).MatchString(value)
+	return canonicalGuidRegex.MatchString(value)
 }

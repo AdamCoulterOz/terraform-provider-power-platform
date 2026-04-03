@@ -5,9 +5,11 @@ package publisher
 
 import (
 	"math"
+	"net/http"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 )
 
@@ -85,6 +87,24 @@ func TestUnitSetResourceModelFromDto_PreservesExplicitEmptyTopLevelStrings(t *te
 	}
 }
 
+func TestUnitSetResourceModelFromDto_PreservesCaseOnlyFriendlyNameDifferences(t *testing.T) {
+	model := ResourceModel{
+		FriendlyName: types.StringValue("MetaForm"),
+	}
+
+	setResourceModelFromDto(&model, "00000000-0000-0000-0000-000000000001", &publisherDto{
+		Id:                             "11111111-1111-1111-1111-111111111111",
+		UniqueName:                     "metaform",
+		FriendlyName:                   "Metaform",
+		CustomizationPrefix:            "mf",
+		CustomizationOptionValuePrefix: 12457,
+	})
+
+	if model.FriendlyName.ValueString() != "MetaForm" {
+		t.Fatalf("expected configured friendly_name casing to be preserved, got %q", model.FriendlyName.ValueString())
+	}
+}
+
 func TestUnitAddressModelsFromDto_PreservesExplicitEmptyAddressList(t *testing.T) {
 	models := addressModelsFromDto(&publisherDto{}, []PublisherAddressModel{})
 	if models == nil {
@@ -134,10 +154,116 @@ func TestUnitDeriveCustomizationOptionValuePrefix_UsesPublisherSpecialCase(t *te
 	}
 }
 
+func TestUnitDeriveCustomizationOptionValuePrefix_UsesPublisherSpecialCaseCaseInsensitive(t *testing.T) {
+	got := deriveCustomizationOptionValuePrefix("anything", "D21AAB71-79E7-11DD-8874-00188B01E34F")
+	if got != 10000 {
+		t.Fatalf("expected case-insensitive special-case derived prefix 10000, got %d", got)
+	}
+}
+
 func TestUnitCustomizationOptionValuePrefixFromHash_HandlesMinInt32(t *testing.T) {
 	got := customizationOptionValuePrefixFromHash(math.MinInt32)
 	if got != 93648 {
 		t.Fatalf("expected min-int32 hash to produce 93648, got %d", got)
+	}
+}
+
+func TestUnitSetDerivedCustomizationOptionValuePrefix_DerivesWhenConfigOmitted(t *testing.T) {
+	plan := ResourceModel{
+		CustomizationPrefix:            types.StringValue("mf"),
+		CustomizationOptionValuePrefix: types.Int64Unknown(),
+	}
+	config := ResourceModel{
+		CustomizationOptionValuePrefix: types.Int64Null(),
+	}
+
+	setDerivedCustomizationOptionValuePrefix(&plan, &config, &ResourceModel{}, false)
+
+	if plan.CustomizationOptionValuePrefix.IsUnknown() || plan.CustomizationOptionValuePrefix.IsNull() {
+		t.Fatal("expected derived customization option value prefix to be planned")
+	}
+	if plan.CustomizationOptionValuePrefix.ValueInt64() != 12457 {
+		t.Fatalf("expected derived customization option value prefix 12457, got %d", plan.CustomizationOptionValuePrefix.ValueInt64())
+	}
+}
+
+func TestUnitSetDerivedCustomizationOptionValuePrefix_PreservesExplicitConfigValue(t *testing.T) {
+	plan := ResourceModel{
+		CustomizationPrefix:            types.StringValue("mf"),
+		CustomizationOptionValuePrefix: types.Int64Value(77777),
+	}
+	config := ResourceModel{
+		CustomizationOptionValuePrefix: types.Int64Value(77777),
+	}
+
+	setDerivedCustomizationOptionValuePrefix(&plan, &config, &ResourceModel{}, false)
+
+	if plan.CustomizationOptionValuePrefix.ValueInt64() != 77777 {
+		t.Fatalf("expected explicit customization option value prefix to be preserved, got %d", plan.CustomizationOptionValuePrefix.ValueInt64())
+	}
+}
+
+func TestUnitSetDerivedCustomizationOptionValuePrefix_PreservesStateValueAfterCreate(t *testing.T) {
+	plan := ResourceModel{
+		Id:                             types.StringValue("11111111-1111-1111-1111-111111111111"),
+		CustomizationPrefix:            types.StringValue("ab"),
+		CustomizationOptionValuePrefix: types.Int64Unknown(),
+	}
+	config := ResourceModel{
+		CustomizationOptionValuePrefix: types.Int64Null(),
+	}
+	state := ResourceModel{
+		Id:                             types.StringValue("11111111-1111-1111-1111-111111111111"),
+		CustomizationPrefix:            types.StringValue("old"),
+		CustomizationOptionValuePrefix: types.Int64Value(77074),
+	}
+
+	setDerivedCustomizationOptionValuePrefix(&plan, &config, &state, true)
+
+	if plan.CustomizationOptionValuePrefix.ValueInt64() != state.CustomizationOptionValuePrefix.ValueInt64() {
+		t.Fatalf("expected existing customization option value prefix to be preserved from state, got %d", plan.CustomizationOptionValuePrefix.ValueInt64())
+	}
+}
+
+func TestUnitGetPublisherIdFromResponse_ParsesCanonicalGuid(t *testing.T) {
+	resp := &api.Response{
+		HttpResponse: &http.Response{
+			Header: http.Header{
+				"OData-EntityId": []string{"https://example.crm.dynamics.com/api/data/v9.2/publishers(11111111-1111-1111-1111-111111111111)"},
+			},
+		},
+	}
+
+	got, err := getPublisherIdFromResponse(resp)
+	if err != nil {
+		t.Fatalf("expected publisher id to be parsed, got error: %v", err)
+	}
+	if got != "11111111-1111-1111-1111-111111111111" {
+		t.Fatalf("expected canonical publisher id, got %q", got)
+	}
+}
+
+func TestUnitGetPublisherIdFromResponse_RejectsNonCanonicalGuid(t *testing.T) {
+	resp := &api.Response{
+		HttpResponse: &http.Response{
+			Header: http.Header{
+				"OData-EntityId": []string{"https://example.crm.dynamics.com/api/data/v9.2/publishers(11111111-1111-1111-1111-11111111111)"},
+			},
+		},
+	}
+
+	_, err := getPublisherIdFromResponse(resp)
+	if err == nil {
+		t.Fatal("expected malformed publisher id to be rejected")
+	}
+}
+
+func TestUnitIsGuid_RequiresCanonicalGuidFormat(t *testing.T) {
+	if !isGuid("11111111-1111-1111-1111-111111111111") {
+		t.Fatal("expected canonical guid to be recognized")
+	}
+	if isGuid("11111111-1111-1111-1111-11111111111") {
+		t.Fatal("expected malformed guid to be rejected")
 	}
 }
 
