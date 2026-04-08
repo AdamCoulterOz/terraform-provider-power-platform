@@ -41,6 +41,8 @@
     - `codex/powerplatform-publisher-resource-datasource`
     - `codex/user-refresh-missing-environment`
     - `unmanaged_solution`
+    - `bug/connection_parameters_unknown`
+    - `bug/solution_settings_inconsistent`
   - local merge consolidation completed on 2026-04-03
   - `git branch --no-merged codex/preview-integration` returned no remaining local branches after consolidation
 
@@ -49,10 +51,10 @@
 - Forked preview binaries are published from:
   - `.github/workflows/fork_provider_binaries.yml`
 - Preview assets are released as GitHub prereleases with tags like:
-  - `fork-v4.1.1-adam-preview.8`
+  - `fork-v4.1.1-adam-preview.9`
 - Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
 - The current workflow-dispatch default version in the fork binary workflow is:
-  - `4.1.1-adam-preview.8`
+  - `4.1.1-adam-preview.9`
 - The fork binary workflow now forces JavaScript actions onto Node 24 and uses the same Node 24-capable pinned action SHAs as the rest of the repository.
 
 ## Recent provider work carried on preview branches
@@ -68,6 +70,8 @@
 - unmanaged solution description handling that preserves explicit empty strings
 - environment security group update fix for non-Developer environments
 - `powerplatform_user` handling when the parent environment no longer exists
+- connection parameter state handling when parameters remain unknown after apply
+- solution settings checksum consistency across plan/apply
 
 ## Security group update bugfix
 
