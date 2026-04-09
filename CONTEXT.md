@@ -45,6 +45,7 @@
     - `bug/solution_settings_inconsistent`
     - `feature/managed_solution`
     - `feature/application_user`
+    - `feature/environment_variable`
   - local merge consolidation completed on 2026-04-03
   - `git branch --no-merged codex/preview-integration` returned no remaining local branches after consolidation
 
@@ -53,10 +54,10 @@
 - Forked preview binaries are published from:
   - `.github/workflows/fork_provider_binaries.yml`
 - Preview assets are released as GitHub prereleases with tags like:
-  - `fork-v4.1.1-adam-preview.10`
+  - `fork-v4.1.1-adam-preview.11`
 - Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
 - The current workflow-dispatch default version in the fork binary workflow is:
-  - `4.1.1-adam-preview.10`
+  - `4.1.1-adam-preview.11`
 - The fork binary workflow now forces JavaScript actions onto Node 24 and uses the same Node 24-capable pinned action SHAs as the rest of the repository.
 
 ## Recent provider work carried on preview branches
@@ -76,6 +77,7 @@
 - solution settings checksum consistency across plan/apply
 - managed solution resource support, including package inspection and import flow
 - environment application user resource support
+- environment variable resource support
 
 ## Security group update bugfix
 
