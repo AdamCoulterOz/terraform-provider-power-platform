@@ -63,6 +63,8 @@ func TestUnitTestEnvironmentSettingsResource_Validate_Create_Empty_Settings(t *t
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.is_user_access_audit_enabled", "true"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.log_retention_period_in_days", "-1"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "email.email_settings.max_upload_file_size_in_bytes", "5242880"),
+					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.#", "96"),
+					resource.TestCheckTypeSetElemAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.*", "js"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.plugin_trace_log_setting", "Off"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.behavior_settings.show_dashboard_cards_in_expanded_state", "true"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.features.power_apps_component_framework_for_canvas_apps", "false"),
@@ -97,6 +99,11 @@ func TestAccTestEnvironmentSettingsResource_Validate_Create_Empty_Settings(t *te
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               false,
 		ProtoV6ProviderFactories: mocks.TestAccProtoV6ProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"time": {
+				Source: "hashicorp/time",
+			},
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: `
@@ -111,8 +118,16 @@ func TestAccTestEnvironmentSettingsResource_Validate_Create_Empty_Settings(t *te
 						}
 					}
 
+					resource "time_sleep" "wait_for_dataverse" {
+						create_duration = "120s"
+
+						depends_on = [powerplatform_environment.example_environment_settings]
+					}
+
 					resource "powerplatform_environment_settings" "settings" {
 						environment_id                         = powerplatform_environment.example_environment_settings.id
+
+						depends_on = [time_sleep.wait_for_dataverse]
 					}`,
 
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -121,6 +136,8 @@ func TestAccTestEnvironmentSettingsResource_Validate_Create_Empty_Settings(t *te
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.is_user_access_audit_enabled", "false"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.log_retention_period_in_days", "-1"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "email.email_settings.max_upload_file_size_in_bytes", "5242880"),
+					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.#", "96"),
+					resource.TestCheckTypeSetElemAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.*", "js"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.plugin_trace_log_setting", "Off"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.behavior_settings.show_dashboard_cards_in_expanded_state", "false"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.features.power_apps_component_framework_for_canvas_apps", "false"),
@@ -199,8 +216,11 @@ func TestAccTestEnvironmentSettingsResource_Validate_Read(t *testing.T) {
 						email_settings = {
 						  max_upload_file_size_in_bytes = 100
 						}
-					}
-					product = {
+					  }
+					  privacy_and_security = {
+						blocked_attachment_extensions = toset(["exe", "js"])
+					  }
+					  product = {
 						behavior_settings = {
 						  show_dashboard_cards_in_expanded_state = true
 						}
@@ -241,6 +261,9 @@ func TestAccTestEnvironmentSettingsResource_Validate_Read(t *testing.T) {
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.is_user_access_audit_enabled", "true"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.audit_settings.log_retention_period_in_days", "-1"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "email.email_settings.max_upload_file_size_in_bytes", "100"),
+					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.#", "2"),
+					resource.TestCheckTypeSetElemAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.*", "exe"),
+					resource.TestCheckTypeSetElemAttr("powerplatform_environment_settings.settings", "privacy_and_security.blocked_attachment_extensions.*", "js"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "audit_and_logs.plugin_trace_log_setting", "All"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.behavior_settings.show_dashboard_cards_in_expanded_state", "true"),
 					resource.TestCheckResourceAttr("powerplatform_environment_settings.settings", "product.features.power_apps_component_framework_for_canvas_apps", "true"),
