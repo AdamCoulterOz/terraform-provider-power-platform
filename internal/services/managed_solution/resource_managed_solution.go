@@ -189,7 +189,6 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 		if !shouldPreserveStateSource(state.Source, time.Now().UTC()) {
 			return
 		}
-
 		plan.Source = cloneSourceModel(state.Source)
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
@@ -332,7 +331,6 @@ func normalizeSolutionVersionOrOriginal(raw string) string {
 
 	return normalized
 }
-
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
 	defer exitContext()
@@ -486,7 +484,7 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 		return nil
 	}
 
-	installedSolutions, err := r.Client.GetSolutions(ctx, plan.EnvironmentId.ValueString())
+	installedSolutions, err := r.Client.GetInstalledSolutions(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		diagnostics.AddError("Unable to verify installed solution dependencies", err.Error())
 		return nil
