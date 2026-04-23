@@ -5,15 +5,12 @@ package managedsolution
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
@@ -186,9 +183,6 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 		plan.Version.ValueString() == state.Version.ValueString() &&
 		mapsEqual(planRefs, stateRefs) &&
 		sourcesAreEquivalent(plan.Source, state.Source) {
-		if !shouldPreserveStateSource(state.Source, time.Now().UTC()) {
-			return
-		}
 		plan.Source = cloneSourceModel(state.Source)
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
@@ -229,69 +223,9 @@ func normalizedSourceURL(value types.String) string {
 		return raw
 	}
 
-	query := parsed.Query()
-	query.Del("token")
-	parsed.RawQuery = query.Encode()
+	parsed.RawQuery = ""
 	parsed.Fragment = ""
 	return parsed.String()
-}
-
-func shouldPreserveStateSource(source *SourceModel, now time.Time) bool {
-	if source == nil {
-		return false
-	}
-
-	if normalizedSourceString(source.Path) != "" {
-		return true
-	}
-
-	expiresAt, ok := powerPackDownloadURLExpiry(normalizedSourceString(source.URL))
-	if !ok {
-		return false
-	}
-
-	// Keep a small buffer so apply does not reuse a token that is about to expire.
-	return expiresAt.After(now.Add(5 * time.Minute))
-}
-
-func powerPackDownloadURLExpiry(raw string) (time.Time, bool) {
-	if raw == "" {
-		return time.Time{}, false
-	}
-
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return time.Time{}, false
-	}
-
-	token := parsed.Query().Get("token")
-	if token == "" {
-		return time.Time{}, false
-	}
-
-	parts := strings.SplitN(token, ".", 2)
-	if len(parts) != 2 {
-		return time.Time{}, false
-	}
-
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		return time.Time{}, false
-	}
-
-	var payload struct {
-		ExpiresAtUnixTimeSeconds int64 `json:"ExpiresAtUnixTimeSeconds"`
-	}
-
-	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-		return time.Time{}, false
-	}
-
-	if payload.ExpiresAtUnixTimeSeconds <= 0 {
-		return time.Time{}, false
-	}
-
-	return time.Unix(payload.ExpiresAtUnixTimeSeconds, 0).UTC(), true
 }
 
 func normalizeSolutionVersion(raw string) (string, error) {
@@ -331,6 +265,7 @@ func normalizeSolutionVersionOrOriginal(raw string) string {
 
 	return normalized
 }
+
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
 	defer exitContext()
