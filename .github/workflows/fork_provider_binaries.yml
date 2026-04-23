@@ -4,10 +4,6 @@ name: Build Fork Provider Binaries
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Optional provider version override. Leave blank to auto-increment the next adam preview version.
-        required: false
-        default: ""
       publish_release:
         description: Publish the built artifacts to a GitHub prerelease in this fork.
         required: true
@@ -28,6 +24,7 @@ jobs:
       contents: write
     env:
       CGO_ENABLED: "0"
+      VERSION: 4.1.1-adam-preview.${{ github.run_number }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
@@ -43,34 +40,7 @@ jobs:
           cache: true
           go-version-file: "go.mod"
 
-      - name: Resolve build version
-        id: build_version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_INPUT: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-
-          if [ -n "${VERSION_INPUT}" ]; then
-            VERSION="${VERSION_INPUT}"
-          else
-            PREFIX="4.1.1-adam-preview."
-            TAG_PREFIX="fork-v${PREFIX}"
-            LATEST="$(
-              gh release list \
-                --limit 200 \
-                --json tagName \
-                --jq "[.[].tagName | select(startswith(\"${TAG_PREFIX}\")) | sub(\"^${TAG_PREFIX}\"; \"\") | tonumber] | max // 0"
-            )"
-            VERSION="${PREFIX}$((LATEST + 1))"
-          fi
-
-          echo "Resolved provider version: ${VERSION}"
-          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
-
       - name: Build release archives
-        env:
-          VERSION: ${{ steps.build_version.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -122,7 +92,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: provider-binaries-${{ steps.build_version.outputs.version }}
+          name: provider-binaries-${{ env.VERSION }}
           path: |
             dist/*.zip
             dist/*_SHA256SUMS
@@ -132,7 +102,6 @@ jobs:
         if: ${{ inputs.publish_release }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.build_version.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -152,8 +121,6 @@ jobs:
             dist/*_SHA256SUMS
 
       - name: Write workflow summary
-        env:
-          VERSION: ${{ steps.build_version.outputs.version }}
         run: |
           {
             echo "## Fork Provider Binaries"
