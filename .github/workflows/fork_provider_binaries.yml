@@ -2,6 +2,9 @@
 name: Build Fork Provider Binaries
 
 on:
+  push:
+    branches:
+      - codex/preview-integration
   workflow_dispatch:
     inputs:
       publish_release:
@@ -99,7 +102,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish prerelease
-        if: ${{ inputs.publish_release }}
+        if: ${{ github.event_name == 'push' || inputs.publish_release }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -128,7 +131,7 @@ jobs:
             echo "- Version: \`${VERSION}\`"
             echo "- Targets: \`linux_amd64\`, \`windows_amd64\`, \`darwin_arm64\`"
             echo "- Artifact bundle: \`provider-binaries-${VERSION}\`"
-            if [ "${{ inputs.publish_release }}" = "true" ]; then
+            if [ "${{ github.event_name == 'push' || inputs.publish_release }}" = "true" ]; then
               echo "- Release tag: \`fork-v${VERSION}\`"
             fi
           } >> "${GITHUB_STEP_SUMMARY}"
