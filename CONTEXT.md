@@ -54,10 +54,10 @@
 - Forked preview binaries are published from:
   - `.github/workflows/fork_provider_binaries.yml`
 - Preview assets are released as GitHub prereleases with tags like:
-  - `fork-v4.1.1-adam-preview.13`
+  - `fork-v4.1.1-adam-preview.35`
 - Shared Azure DevOps pipeline templates download those prerelease zip assets directly.
-- The current workflow-dispatch default version in the fork binary workflow is:
-  - `4.1.1-adam-preview.13`
+- The fork binary workflow derives preview versions from the GitHub Actions run number:
+  - `4.1.1-adam-preview.${{ github.run_number }}`
 - The fork binary workflow now forces JavaScript actions onto Node 24 and uses the same Node 24-capable pinned action SHAs as the rest of the repository.
 
 ## Recent provider work carried on preview branches
@@ -78,6 +78,7 @@
 - managed solution resource support, including package inspection and import flow
 - managed solution bugfix to omit empty component parameters in managed solution requests
 - managed solution bugfix to fail on invalid managed solution dependencies
+- managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies
 - environment application user resource support
 - environment variable resource support
 

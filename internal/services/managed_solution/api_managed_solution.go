@@ -630,6 +630,10 @@ func validateDependencies(required map[string]string, installed []solution.Solut
 	slices.Sort(keys)
 
 	for _, dependencyName := range keys {
+		if isBuiltInSolutionDependency(dependencyName) {
+			continue
+		}
+
 		requiredVersion := required[dependencyName]
 		installedSolution, exists := installedByName[strings.ToLower(dependencyName)]
 		if !exists {
