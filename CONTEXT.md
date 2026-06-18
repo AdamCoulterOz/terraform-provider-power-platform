@@ -79,6 +79,7 @@
 - managed solution bugfix to omit empty component parameters in managed solution requests
 - managed solution bugfix to fail on invalid managed solution dependencies
 - managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies
+- managed environment state handling now preserves known configured values and normalizes omitted optional computed values to null when the Power Platform API response omits governance settings immediately after apply, avoiding invalid unknown values in Terraform state
 - environment application user resource support
 - environment variable resource support
 
