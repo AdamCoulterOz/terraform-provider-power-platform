@@ -80,6 +80,7 @@
 - managed solution bugfix to fail on invalid managed solution dependencies
 - managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies
 - managed environment state handling now preserves known configured values and normalizes omitted optional computed values to null when the Power Platform API response omits governance settings immediately after apply, avoiding invalid unknown values in Terraform state
+- `powerplatform_managed_environment` must not apply managed-environment settings when the environment is already in an environment group; create and update paths both warn, preserve stable Terraform state, and avoid returning unknown values for ignored group-managed settings.
 - environment application user resource support
 - environment variable resource support
 
