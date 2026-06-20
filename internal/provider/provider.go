@@ -44,6 +44,7 @@ import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment_templates"
 	environmentvariable "github.com/microsoft/terraform-provider-power-platform/internal/services/environment_variable"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment_wave"
+	"github.com/microsoft/terraform-provider-power-platform/internal/services/fabric_link"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/git_integration"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/languages"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/licensing"
@@ -416,6 +417,7 @@ func (p *PowerPlatformProvider) Resources(ctx context.Context) []func() resource
 		func() resource.Resource { return data_record.NewDataRecordResource() },
 		func() resource.Resource { return publisher.NewPublisherResource() },
 		func() resource.Resource { return environment_settings.NewEnvironmentSettingsResource() },
+		func() resource.Resource { return fabric_link.NewFabricLinkResource() },
 		func() resource.Resource { return connection.NewConnectionResource() },
 		func() resource.Resource { return rest.NewDataverseWebApiResource() },
 		func() resource.Resource { return environment_wave.NewEnvironmentWaveResource() },
