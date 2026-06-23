@@ -36,6 +36,7 @@ type credentialType string
 
 const (
 	credTypeClientSecret          credentialType = "client_secret"
+	credTypeUsernamePassword      credentialType = "username_password"
 	credTypeClientCertificate     credentialType = "client_certificate"
 	credTypeCLI                   credentialType = "cli"
 	credTypeDevCLI                credentialType = "dev_cli"
@@ -237,6 +238,36 @@ func (client *Auth) AuthenticateClientSecret(ctx context.Context, scopes []strin
 			client.config.ClientId,
 			client.config.ClientSecret,
 			&azidentity.ClientSecretCredentialOptions{
+				AdditionallyAllowedTenants: client.config.AuxiliaryTenantIDs,
+				ClientOptions: azcore.ClientOptions{
+					Cloud: client.config.Cloud,
+				},
+			},
+		)
+	})
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	accessToken, err := cred.GetToken(ctx, client.createTokenRequestOptions(ctx, scopes))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return accessToken.Token, accessToken.ExpiresOn, nil
+}
+
+// AuthenticateUsernamePassword authenticates with Resource Owner Password Credentials (ROPC). This is
+// intentionally narrow: it exists for a contained delegated escape-hatch account (e.g. SVC.ELMO) used
+// for the rare Dataverse operations that refuse app-only tokens. ROPC is discouraged by Microsoft and
+// does not support MFA or Conditional Access, so the account must be exempt from both.
+func (client *Auth) AuthenticateUsernamePassword(ctx context.Context, scopes []string) (string, time.Time, error) {
+	cred, err := client.getOrCreateCredential(ctx, credTypeUsernamePassword, func() (azcore.TokenCredential, error) {
+		return azidentity.NewUsernamePasswordCredential(
+			client.config.TenantId,
+			client.config.ClientId,
+			client.config.Username,
+			client.config.Password,
+			&azidentity.UsernamePasswordCredentialOptions{
 				AdditionallyAllowedTenants: client.config.AuxiliaryTenantIDs,
 				ClientOptions: azcore.ClientOptions{
 					Cloud: client.config.Cloud,
@@ -504,6 +535,8 @@ func (client *Auth) GetTokenForScopes(ctx context.Context, scopes []string) (*st
 	switch {
 	case client.config.IsClientSecretCredentialsProvided():
 		token, tokenExpiry, err = client.AuthenticateClientSecret(ctx, scopes)
+	case client.config.IsClientUsernamePasswordCredentialsProvided():
+		token, tokenExpiry, err = client.AuthenticateUsernamePassword(ctx, scopes)
 	case client.config.IsCliProvided():
 		token, tokenExpiry, err = client.AuthenticateUsingCli(ctx, scopes)
 	case client.config.IsDevCliProvided():
