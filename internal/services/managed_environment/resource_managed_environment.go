@@ -189,6 +189,26 @@ func (r *ManagedEnvironmentResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
+		return
+	}
+
+	if env.Properties.ParentEnvironmentGroup != nil && env.Properties.ParentEnvironmentGroup.Id != "" {
+		resp.Diagnostics.AddWarning(
+			fmt.Sprintf("Environment '%s' is included in Environment Group '%s'. The Manage Environment Settings will not be applied.", plan.EnvironmentId.ValueString(), env.Properties.ParentEnvironmentGroup.Id),
+			"Managed Environment settings cannot be applied to environments that are part of an Environment Group. "+
+				"To manage settings for this environment, remove it from the group or apply settings at the group level if supported.",
+		)
+		r.populateStateForEnvironmentGroup(ctx, plan, env, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
+
 	solutionCheckerRuleOverrides, ok := r.validateAndPrepareSolutionCheckerRules(ctx, plan, &resp.Diagnostics)
 	if !ok {
 		return
@@ -196,13 +216,13 @@ func (r *ManagedEnvironmentResource) Create(ctx context.Context, req resource.Cr
 
 	managedEnvironmentDto := r.buildManagedEnvironmentDto(plan, solutionCheckerRuleOverrides)
 
-	err := r.ManagedEnvironmentClient.EnableManagedEnvironment(ctx, managedEnvironmentDto, plan.EnvironmentId.ValueString())
+	err = r.ManagedEnvironmentClient.EnableManagedEnvironment(ctx, managedEnvironmentDto, plan.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when enabling managed environment %s", r.FullTypeName()), err.Error())
 		return
 	}
 
-	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	env, err = r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
 		return
@@ -435,9 +455,13 @@ func (r *ManagedEnvironmentResource) buildManagedEnvironmentDto(plan *ManagedEnv
 
 func (r *ManagedEnvironmentResource) populateStateFromEnvironment(ctx context.Context, plan *ManagedEnvironmentResourceModel, env *environment.EnvironmentDto, diagnostics *diag.Diagnostics) {
 	plan.Id = plan.EnvironmentId
-	plan.ProtectionLevel = types.StringValue(env.Properties.GovernanceConfiguration.ProtectionLevel)
+	if env.Properties != nil && env.Properties.GovernanceConfiguration != nil && env.Properties.GovernanceConfiguration.ProtectionLevel != "" {
+		plan.ProtectionLevel = types.StringValue(env.Properties.GovernanceConfiguration.ProtectionLevel)
+	} else if plan.ProtectionLevel.IsUnknown() || plan.ProtectionLevel.IsNull() {
+		plan.ProtectionLevel = types.StringValue("Standard")
+	}
 
-	if env.Properties.GovernanceConfiguration.Settings != nil {
+	if env.Properties != nil && env.Properties.GovernanceConfiguration != nil && env.Properties.GovernanceConfiguration.Settings != nil {
 		maxLimitUserSharing, _ := strconv.ParseInt(env.Properties.GovernanceConfiguration.Settings.ExtendedSettings.MaxLimitUserSharing, 10, 64)
 
 		if env.Properties.GovernanceConfiguration.Settings.ExtendedSettings.BotMaxLimitUserSharing != nil {
@@ -501,16 +525,91 @@ func (r *ManagedEnvironmentResource) populateStateFromEnvironment(ctx context.Co
 			plan.SolutionCheckerRuleOverrides = ruleOverrides
 		}
 	} else {
-		plan.IsGroupSharingDisabled = types.BoolUnknown()
-		plan.IsUsageInsightsDisabled = types.BoolUnknown()
-		plan.MaxLimitUserSharing = types.Int64Unknown()
-		plan.LimitSharingMode = types.StringUnknown()
-		plan.SolutionCheckerMode = types.StringUnknown()
-		plan.SuppressValidationEmails = types.BoolUnknown()
-		plan.SolutionCheckerRuleOverrides = types.SetUnknown(types.StringType)
-		plan.PowerAutomateIsSharingDisabled = types.BoolUnknown()
-		plan.CopilotAllowGrantPermissionsWhenShared = types.BoolUnknown()
-		plan.CopilotLimitSharingMode = types.StringUnknown()
-		plan.CopilotMaxLimitUserSharing = types.Int64Unknown()
+		r.populateStateWhenSettingsMissing(plan, diagnostics)
+	}
+}
+
+func (r *ManagedEnvironmentResource) populateStateForEnvironmentGroup(ctx context.Context, plan *ManagedEnvironmentResourceModel, env *environment.EnvironmentDto, diagnostics *diag.Diagnostics) {
+	if env.Properties != nil && env.Properties.GovernanceConfiguration != nil && env.Properties.GovernanceConfiguration.Settings != nil {
+		r.populateStateFromEnvironment(ctx, plan, env, diagnostics)
+		if diagnostics.HasError() {
+			return
+		}
+	} else {
+		plan.Id = plan.EnvironmentId
+		if env.Properties != nil && env.Properties.GovernanceConfiguration != nil && env.Properties.GovernanceConfiguration.ProtectionLevel != "" {
+			plan.ProtectionLevel = types.StringValue(env.Properties.GovernanceConfiguration.ProtectionLevel)
+		} else if plan.ProtectionLevel.IsUnknown() || plan.ProtectionLevel.IsNull() {
+			plan.ProtectionLevel = types.StringValue("Standard")
+		}
+	}
+
+	r.normalizeUnknownEnvironmentGroupState(plan)
+}
+
+func (r *ManagedEnvironmentResource) normalizeUnknownEnvironmentGroupState(plan *ManagedEnvironmentResourceModel) {
+	if plan.IsUsageInsightsDisabled.IsUnknown() || plan.IsUsageInsightsDisabled.IsNull() {
+		plan.IsUsageInsightsDisabled = types.BoolValue(false)
+	}
+	if plan.IsGroupSharingDisabled.IsUnknown() || plan.IsGroupSharingDisabled.IsNull() {
+		plan.IsGroupSharingDisabled = types.BoolValue(false)
+	}
+	if plan.MaxLimitUserSharing.IsUnknown() || plan.MaxLimitUserSharing.IsNull() {
+		plan.MaxLimitUserSharing = types.Int64Value(-1)
+	}
+	if plan.LimitSharingMode.IsUnknown() || plan.LimitSharingMode.IsNull() {
+		plan.LimitSharingMode = types.StringValue("NoLimit")
+	}
+	if plan.SolutionCheckerMode.IsUnknown() || plan.SolutionCheckerMode.IsNull() {
+		plan.SolutionCheckerMode = types.StringValue("None")
+	}
+	if plan.SuppressValidationEmails.IsUnknown() || plan.SuppressValidationEmails.IsNull() {
+		plan.SuppressValidationEmails = types.BoolValue(false)
+	}
+	if plan.SolutionCheckerRuleOverrides.IsUnknown() {
+		plan.SolutionCheckerRuleOverrides = types.SetNull(types.StringType)
+	}
+	if plan.PowerAutomateIsSharingDisabled.IsUnknown() {
+		plan.PowerAutomateIsSharingDisabled = types.BoolNull()
+	}
+	if plan.CopilotAllowGrantPermissionsWhenShared.IsUnknown() {
+		plan.CopilotAllowGrantPermissionsWhenShared = types.BoolNull()
+	}
+	if plan.CopilotLimitSharingMode.IsUnknown() {
+		plan.CopilotLimitSharingMode = types.StringNull()
+	}
+	if plan.CopilotMaxLimitUserSharing.IsUnknown() {
+		plan.CopilotMaxLimitUserSharing = types.Int64Null()
+	}
+}
+
+func (r *ManagedEnvironmentResource) populateStateWhenSettingsMissing(plan *ManagedEnvironmentResourceModel, diagnostics *diag.Diagnostics) {
+	if plan.IsUsageInsightsDisabled.IsUnknown() || plan.IsUsageInsightsDisabled.IsNull() ||
+		plan.IsGroupSharingDisabled.IsUnknown() || plan.IsGroupSharingDisabled.IsNull() ||
+		plan.MaxLimitUserSharing.IsUnknown() || plan.MaxLimitUserSharing.IsNull() ||
+		plan.LimitSharingMode.IsUnknown() || plan.LimitSharingMode.IsNull() ||
+		plan.SolutionCheckerMode.IsUnknown() || plan.SolutionCheckerMode.IsNull() ||
+		plan.SuppressValidationEmails.IsUnknown() || plan.SuppressValidationEmails.IsNull() {
+		diagnostics.AddError(
+			"Managed environment settings unavailable",
+			"The Power Platform API response did not include managed environment settings, and the existing Terraform state does not contain all required managed environment settings.",
+		)
+		return
+	}
+
+	if plan.SolutionCheckerRuleOverrides.IsUnknown() {
+		plan.SolutionCheckerRuleOverrides = types.SetNull(types.StringType)
+	}
+	if plan.PowerAutomateIsSharingDisabled.IsUnknown() {
+		plan.PowerAutomateIsSharingDisabled = types.BoolNull()
+	}
+	if plan.CopilotAllowGrantPermissionsWhenShared.IsUnknown() {
+		plan.CopilotAllowGrantPermissionsWhenShared = types.BoolNull()
+	}
+	if plan.CopilotLimitSharingMode.IsUnknown() {
+		plan.CopilotLimitSharingMode = types.StringNull()
+	}
+	if plan.CopilotMaxLimitUserSharing.IsUnknown() {
+		plan.CopilotMaxLimitUserSharing = types.Int64Null()
 	}
 }

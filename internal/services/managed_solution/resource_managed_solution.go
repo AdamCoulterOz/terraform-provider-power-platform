@@ -166,22 +166,10 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 		return
 	}
 
-	planRefs, diags := expandStringMap(plan.ConnectionReferences)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	stateRefs, diags := expandStringMap(state.ConnectionReferences)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	if plan.EnvironmentId.ValueString() == state.EnvironmentId.ValueString() &&
 		plan.UniqueName.ValueString() == state.UniqueName.ValueString() &&
 		plan.Version.ValueString() == state.Version.ValueString() &&
-		mapsEqual(planRefs, stateRefs) &&
+		plan.ConnectionReferences.Equal(state.ConnectionReferences) &&
 		sourcesAreEquivalent(plan.Source, state.Source) {
 		plan.Source = cloneSourceModel(state.Source)
 		plan.Id = state.Id
