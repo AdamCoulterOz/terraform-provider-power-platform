@@ -467,6 +467,30 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		}
 	}
 
+	// The inline billing_policy_id sent in CreateEnvironment only satisfies the
+	// capacity/access gate; it does not reliably associate the environment with the
+	// billing policy. Now that the environment id is known and provisioning has
+	// succeeded, make the explicit licensing call to add the environment to the policy,
+	// then re-read the environment so state reflects the real association (plan stability).
+	plan.Id = types.StringValue(envDto.Name)
+	err = r.addBillingPolicy(ctx, plan)
+	if err != nil {
+		resp.Diagnostics.AddError("Error when adding billing policy", err.Error())
+		return
+	}
+
+	if !plan.BillingPolicyId.IsNull() && !plan.BillingPolicyId.IsUnknown() && plan.BillingPolicyId.ValueString() != constants.ZERO_UUID {
+		envDto, err = r.EnvironmentClient.GetEnvironment(ctx, envDto.Name)
+		if err != nil {
+			if errors.Is(err, customerrors.ErrObjectNotFound) {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+			resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading %s", r.FullTypeName()), err.Error())
+			return
+		}
+	}
+
 	var currencyCode string
 	var templateMetadata *createTemplateMetadataDto
 	var templates []string

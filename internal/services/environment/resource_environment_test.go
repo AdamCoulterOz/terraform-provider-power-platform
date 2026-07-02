@@ -1503,6 +1503,11 @@ func TestUnitEnvironmentsResource_Validate_Create_With_Billing_Policy(t *testing
 			return resp, nil
 		})
 
+	httpmock.RegisterResponder("POST", "https://api.powerplatform.com/licensing/billingPolicies/00000000-0000-0000-0000-000000000002/environments/add?api-version=2022-03-01-preview",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewStringResponse(http.StatusOK, ""), nil
+		})
+
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		ProtoV6ProviderFactories: mocks.TestUnitTestProtoV6ProviderFactories,
