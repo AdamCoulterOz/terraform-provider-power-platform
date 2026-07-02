@@ -168,8 +168,18 @@ func (r *ApplicationUserResource) Create(ctx context.Context, req resource.Creat
 
 	user, err := r.ApplicationClient.CreateScopedApplicationUser(ctx, plan.EnvironmentId.ValueString(), plan.ApplicationId.ValueString(), businessUnitID)
 	if err != nil {
-		r.addCreateFailureDiagnostics(ctx, resp, plan.EnvironmentId.ValueString(), plan.ApplicationId.ValueString(), err)
-		return
+		// Adopt a pre-existing LIVE application user instead of erroring. SCH re-runs and graph provisioning
+		// (where multiple nodes provision the same dependency identity in their own ephemeral per-node state)
+		// routinely re-create an app-user that already exists; "import it instead" is impractical for that
+		// throwaway state, so we read the existing user and bind it into state. Soft-deleted conflicts are
+		// already purged + retried inside CreateScopedApplicationUser, so only a live user reaches here; if
+		// the lookup also fails it is a genuine create error, so fall through to the original diagnostics.
+		existing, getErr := r.ApplicationClient.GetApplicationUser(ctx, plan.EnvironmentId.ValueString(), plan.ApplicationId.ValueString())
+		if getErr != nil {
+			r.addCreateFailureDiagnostics(ctx, resp, plan.EnvironmentId.ValueString(), plan.ApplicationId.ValueString(), err)
+			return
+		}
+		user = existing
 	}
 
 	desiredDisabled := plan.Disabled.ValueBool()
