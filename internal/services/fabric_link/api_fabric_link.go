@@ -51,8 +51,11 @@ func (client *client) getBapEnvironment(ctx context.Context, environmentId strin
 }
 
 // athenaHost builds the Synapse Link ("athena") orchestration host from the env gateway cluster.
-// Observed: cluster.uriSuffix "au-il301.gateway.prod.island" -> athenawebservice.eau-il301.gateway.prod.island.powerapps.com
-// (the "athenawebservice." prefix is followed by an "e" then the cluster uriSuffix).
+// The prefix before the cluster uriSuffix is the env's AZURE REGION code: "e" = Australia East,
+// "se" = Australia Southeast (same cluster uriSuffix "au-il301...", different region). acdev's env
+// is Australia East -> "e" (athenawebservice.eau-il301...). Verified against the live athena POST
+// as the hatch user. TODO: derive the prefix from env.Properties.AzureRegion (or make it
+// overridable) so non-East-AU regions resolve correctly instead of hardcoding "e".
 func athenaHost(clusterUriSuffix string) (string, error) {
 	if strings.TrimSpace(clusterUriSuffix) == "" {
 		return "", fmt.Errorf("environment cluster uriSuffix is empty; cannot derive the Link to Fabric (athena) host")
@@ -96,10 +99,26 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 		RawQuery: "dxt=false",
 	}
 
-	// The athena response body is base64-encoded JSON, so read raw bytes and decode.
-	resp, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), nil, body, []int{http.StatusOK, http.StatusCreated}, nil)
+	// athena establishes the Dataverse organization context from the x-ms-organization-id HEADER (not the
+	// body's OrganizationId). Without it the POST fails 404 "DatalakefolderNotFoundException ... the
+	// organization context does not have an OrganizationId". The maker portal sends this header; mirror it.
+	headers := http.Header{"x-ms-organization-id": {env.Properties.LinkedEnvironmentMetadata.ResourceId}}
+	// A 403 (empty body) on an org that has NEVER been linked means the org isn't registered with the
+	// athena island yet. The maker portal wizard handles this exact case: 403 -> POST
+	// updateorganizationdetails -> retry (HAR-verified on a virgin org). Accept 403 here so we can
+	// replicate that self-heal instead of failing the create.
+	resp, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), headers, body, []int{http.StatusOK, http.StatusCreated, http.StatusForbidden}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Link to Fabric for environment %s: %w", environmentId, err)
+	}
+	if resp.HttpResponse.StatusCode == http.StatusForbidden {
+		if regErr := client.updateOrganizationDetails(ctx, environmentId, env); regErr != nil {
+			return nil, fmt.Errorf("Link to Fabric returned 403 for environment %s (organization not yet registered with the athena island) and registering it failed: %w", environmentId, regErr)
+		}
+		resp, err = client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), headers, body, []int{http.StatusOK, http.StatusCreated}, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Link to Fabric for environment %s after registering the organization with the athena island: %w", environmentId, err)
+		}
 	}
 
 	result, err := decodeArtifactsResponse(resp.BodyAsBytes)
@@ -113,6 +132,34 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 		result.DatalakeFolderId = folderId
 	}
 	return result, nil
+}
+
+// updateOrganizationDetails registers/refreshes the organization's record with the athena island.
+// Required exactly once per org before its first Link to Fabric: on a never-linked org every
+// env-scoped athena call returns a bare 403 until this runs (the maker portal wizard fires it on 403
+// and retries; request shape copied verbatim from that flow — both query params AND the JSON body
+// echoing the headers).
+func (client *client) updateOrganizationDetails(ctx context.Context, environmentId string, env *bapEnvironmentDto) error {
+	host, err := athenaHost(env.Properties.Cluster.UriSuffix)
+	if err != nil {
+		return err
+	}
+	orgId := env.Properties.LinkedEnvironmentMetadata.ResourceId
+	values := url.Values{}
+	values.Add("organizationUrl", env.Properties.LinkedEnvironmentMetadata.InstanceURL)
+	values.Add("organizationId", orgId)
+	apiUrl := &url.URL{
+		Scheme:   constants.HTTPS,
+		Host:     host,
+		Path:     fmt.Sprintf("/environment/%s/updateorganizationdetails", environmentId),
+		RawQuery: values.Encode(),
+	}
+	headers := http.Header{"x-ms-organization-id": {orgId}}
+	body := map[string]map[string]string{"headers": {"x-ms-organization-id": orgId}}
+	if _, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), headers, body, []int{http.StatusOK, http.StatusNoContent}, nil); err != nil {
+		return fmt.Errorf("failed to register organization %s with the athena island: %w", orgId, err)
+	}
+	return nil
 }
 
 // getDatalakeFolderId resolves the datalakefolder id the unlink DELETE targets. Link to Fabric
