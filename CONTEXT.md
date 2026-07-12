@@ -75,7 +75,7 @@
 - `powerplatform_user` handling when the parent environment no longer exists
 - connection parameter state handling when parameters remain unknown after apply
 - solution settings checksum consistency across plan/apply
-- managed solution resource support, including package inspection and import flow
+- managed solution resource support, including package inspection, initial managed install, and stage-and-upgrade updates that remove omitted managed components
 - managed solution bugfix to omit empty component parameters in managed solution requests
 - managed solution bugfix to fail on invalid managed solution dependencies
 - managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies

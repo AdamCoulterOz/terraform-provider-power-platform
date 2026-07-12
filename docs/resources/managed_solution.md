@@ -3,12 +3,12 @@
 page_title: "powerplatform_managed_solution Resource - Power Platform"
 subcategory: ""
 description: |-
-  Resource for deploying managed Power Platform solutions using solution identity (unique_name + version) instead of package checksums. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.
+  Resource for deploying managed Power Platform solutions using solution identity (unique_name + version) instead of package checksums. Initial creation installs the managed package; updates use Dataverse stage-and-upgrade so components omitted from the new package are removed. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.
 ---
 
 # powerplatform_managed_solution (Resource)
 
-Resource for deploying managed Power Platform solutions using solution identity (`unique_name` + `version`) instead of package checksums. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.
+Resource for deploying managed Power Platform solutions using solution identity (`unique_name` + `version`) instead of package checksums. Initial creation installs the managed package; updates use Dataverse stage-and-upgrade so components omitted from the new package are removed. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.
 
 ## Example Usage
 

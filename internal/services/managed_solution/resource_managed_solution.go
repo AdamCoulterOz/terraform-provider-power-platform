@@ -53,7 +53,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 	defer exitContext()
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Resource for deploying managed Power Platform solutions using solution identity (`unique_name` + `version`) instead of package checksums. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.",
+		MarkdownDescription: "Resource for deploying managed Power Platform solutions using solution identity (`unique_name` + `version`) instead of package checksums. Initial creation installs the managed package; updates use Dataverse stage-and-upgrade so components omitted from the new package are removed. The resource verifies that the package is managed, validates package identity at apply time, requires explicit connection reference bindings, checks that referenced environment variables are already satisfiable in the target environment, and validates solution dependencies before import.",
 		Attributes: map[string]schema.Attribute{
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
 				Create: true,
@@ -273,7 +273,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	solutionState := r.applyManagedSolution(ctx, &plan, config.Source, &resp.Diagnostics)
+	solutionState := r.applyManagedSolution(ctx, &plan, config.Source, false, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -326,7 +326,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	solutionState := r.applyManagedSolution(ctx, &plan, config.Source, &resp.Diagnostics)
+	solutionState := r.applyManagedSolution(ctx, &plan, config.Source, true, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,7 +354,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 }
 
-func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel, deliverySource *SourceModel, diagnostics *diag.Diagnostics) *ResourceModel {
+func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel, deliverySource *SourceModel, stageAndUpgrade bool, diagnostics *diag.Diagnostics) *ResourceModel {
 	dataverseExists, err := r.Client.DataverseExists(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		diagnostics.AddError(fmt.Sprintf("Client error when checking if Dataverse exists in environment '%s'", plan.EnvironmentId.ValueString()), err.Error())
@@ -450,9 +450,9 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 		return nil
 	}
 
-	solutionState, err := r.Client.CreateManagedSolution(ctx, plan.EnvironmentId.ValueString(), content, componentParameters)
+	solutionState, err := r.Client.ApplyManagedSolution(ctx, plan.EnvironmentId.ValueString(), content, componentParameters, stageAndUpgrade)
 	if err != nil {
-		diagnostics.AddError("Unable to import managed solution", err.Error())
+		diagnostics.AddError("Unable to apply managed solution", err.Error())
 		return nil
 	}
 

@@ -58,7 +58,7 @@ func (client *Client) DeleteSolution(ctx context.Context, environmentId, solutio
 	return client.SolutionClient.DeleteSolution(ctx, environmentId, solutionId)
 }
 
-func (client *Client) CreateManagedSolution(ctx context.Context, environmentId string, content []byte, componentParameters []any) (*solution.SolutionDto, error) {
+func (client *Client) ApplyManagedSolution(ctx context.Context, environmentId string, content []byte, componentParameters []any, stageAndUpgrade bool) (*solution.SolutionDto, error) {
 	environmentHost, err := client.SolutionClient.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
@@ -110,10 +110,14 @@ func (client *Client) CreateManagedSolution(ctx context.Context, environmentId s
 		},
 	}
 
+	operation := "ImportSolutionAsync"
+	if stageAndUpgrade {
+		operation = "StageAndUpgradeAsync"
+	}
 	importURL := &url.URL{
 		Scheme: constants.HTTPS,
 		Host:   environmentHost,
-		Path:   "/api/data/v9.2/ImportSolutionAsync",
+		Path:   "/api/data/v9.2/" + operation,
 	}
 	importResponse := importSolutionResponseDto{}
 	resp, err = client.Api.Execute(ctx, nil, "POST", importURL.String(), nil, importRequestBody, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &importResponse)
