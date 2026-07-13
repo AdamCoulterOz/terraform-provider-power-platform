@@ -19,6 +19,7 @@ Terraform provider for declaratively managing Microsoft Power Platform and Datav
 ## Invariants
 
 - Managed solution package unique name, version, and managed layer must match configuration.
+- Semantically equivalent Power Platform solution versions, such as `0.1.39` and `0.1.39.0`, are treated as the same version without rewriting the declared Terraform value.
 - Initial `powerplatform_managed_solution` creation performs a managed install.
 - An existing resource version update uses Dataverse stage-and-upgrade so components absent from the incoming package are removed.
 - Required custom solution dependencies and connection references must be satisfied before import.

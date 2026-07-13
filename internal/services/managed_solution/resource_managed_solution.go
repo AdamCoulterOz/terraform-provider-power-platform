@@ -257,6 +257,18 @@ func normalizeSolutionVersionOrOriginal(raw string) string {
 	return normalized
 }
 
+func reconcileSolutionVersion(declared types.String, remote string) types.String {
+	if !declared.IsNull() && !declared.IsUnknown() {
+		declaredVersion, declaredErr := normalizeSolutionVersion(declared.ValueString())
+		remoteVersion, remoteErr := normalizeSolutionVersion(remote)
+		if declaredErr == nil && remoteErr == nil && declaredVersion == remoteVersion {
+			return declared
+		}
+	}
+
+	return types.StringValue(normalizeSolutionVersionOrOriginal(remote))
+}
+
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
 	defer exitContext()
@@ -305,7 +317,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.SolutionId = types.StringValue(solutionState.Id)
 	state.DisplayName = types.StringValue(solutionState.DisplayName)
 	state.UniqueName = types.StringValue(solutionState.Name)
-	state.Version = types.StringValue(normalizeSolutionVersionOrOriginal(solutionState.Version))
+	state.Version = reconcileSolutionVersion(state.Version, solutionState.Version)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -461,7 +473,7 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 	result.SolutionId = types.StringValue(solutionState.Id)
 	result.DisplayName = types.StringValue(solutionState.DisplayName)
 	result.UniqueName = types.StringValue(solutionState.Name)
-	result.Version = types.StringValue(normalizeSolutionVersionOrOriginal(solutionState.Version))
+	result.Version = reconcileSolutionVersion(plan.Version, solutionState.Version)
 
 	return &result
 }

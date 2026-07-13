@@ -78,6 +78,7 @@
 - managed solution resource support, including package inspection, initial managed install, and stage-and-upgrade updates that remove omitted managed components
 - managed solution bugfix to omit empty component parameters in managed solution requests
 - managed solution bugfix to fail on invalid managed solution dependencies
+- managed solution state preserves the declared version spelling when Dataverse returns an equivalent four-part version, while genuine remote version drift remains visible
 - managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies
 - managed environment state handling now preserves known configured values and normalizes omitted optional computed values to null when the Power Platform API response omits governance settings immediately after apply, avoiding invalid unknown values in Terraform state
 - `powerplatform_managed_environment` must not apply managed-environment settings when the environment is already in an environment group; create and update paths both warn, preserve stable Terraform state, and avoid returning unknown values for ignored group-managed settings.

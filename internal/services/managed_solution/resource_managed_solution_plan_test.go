@@ -63,3 +63,23 @@ func TestNormalizeSolutionVersion_PadsMissingSegments(t *testing.T) {
 		t.Fatalf("expected normalized version to be 1.3.5.0, got %s", normalized)
 	}
 }
+
+func TestReconcileSolutionVersion_PreservesEquivalentDeclaredVersion(t *testing.T) {
+	t.Parallel()
+
+	actual := reconcileSolutionVersion(types.StringValue("0.1.39"), "0.1.39.0")
+
+	if actual.ValueString() != "0.1.39" {
+		t.Fatalf("expected equivalent declared version to remain 0.1.39, got %s", actual.ValueString())
+	}
+}
+
+func TestReconcileSolutionVersion_ReportsRemoteVersionDrift(t *testing.T) {
+	t.Parallel()
+
+	actual := reconcileSolutionVersion(types.StringValue("0.1.39"), "0.1.40.0")
+
+	if actual.ValueString() != "0.1.40.0" {
+		t.Fatalf("expected remote version drift to be reflected as 0.1.40.0, got %s", actual.ValueString())
+	}
+}
