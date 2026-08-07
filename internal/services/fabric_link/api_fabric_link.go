@@ -18,9 +18,9 @@ import (
 
 // athenaResourceScope is the token resource the "athena" Synapse Link service requires
 // (observed aud in the maker-portal capture). It must be requested explicitly because the generic
-// client would otherwise guess the scope from the URL host. NOTE: whether this resource grants
-// APP-ONLY (service principal) tokens — the gate for fully unattended Terraform — is unverified;
-// the capture only proves delegated (user_impersonation) works.
+// client would otherwise guess the scope from the URL host. The provisioning path requires a
+// delegated token in the currently verified SCH deployment and is therefore invoked through the
+// contained username/password provider alias rather than the default app-only pipeline identity.
 const athenaResourceScope = "7f15f9d9-cad0-44f1-bbba-d36650e07765/.default"
 
 func newFabricLinkClient(apiClient *api.Client) client {
@@ -64,7 +64,7 @@ func athenaHost(clusterUriSuffix string) (string, error) {
 }
 
 // CreateFabricLink provisions a Link to Fabric and returns the created mirror ids.
-// connectionId is the Dataverse->OneLake connection to use (see upsertConnection / DESIGN.md).
+// connectionId is the Fabric-to-Dataverse connection to use (see DESIGN.md).
 func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabricWorkspaceId, connectionId string, tables []string) (*lakehouseArtifactsResponseDto, error) {
 	env, err := client.getBapEnvironment(ctx, environmentId)
 	if err != nil {

@@ -64,11 +64,11 @@ Two *separate* notions of "service principal":
 1. **Connection credentials** — what the link uses to read Dataverse on an ongoing basis. This is a
    standard CommonDataService connection created by `powerplatform_connection` with service-principal
    connection parameters — NOT this resource's concern.
-2. **Caller identity** — who *calls* athena. In the wizard this is the signed-in user; for unattended
-   Terraform the running SP obtains an **app-only** token for `7f15f9d9-…`. **VERIFIED (2026-06-20)**: an
-   SP app-only token for `7f15f9d9-…/.default` returns `200` on `GET athenawebservice…/entities`, so
-   athena accepts app-only tokens. The resource's client already requests this scope explicitly, so
-   provider-credentialed (SP) runs work without a delegated token.
+2. **Caller identity** — who *calls* athena. An app-only token for `7f15f9d9-…/.default` returned `200`
+   from the discovery-only `/entities` endpoint, but that did not prove the provisioning path. The
+   create/registration path used by the SCH deployment requires a delegated token. `SCH.Platform.Crm`
+   therefore maps this resource to its contained `powerplatform.svc_elmo` username/password alias;
+   ordinary Power Platform resources continue to use the default app-only/OIDC pipeline identity.
 
 ## Composition (corrected — the connection is Fabric→Dataverse)
 
@@ -138,8 +138,8 @@ target workspace, so point the link at a dedicated mirror workspace, not the Git
 1. **Drift read** — optionally GET `synapselinkprofiles` / `datalakefolders` to detect external unlink in
    `Read` (currently state is preserved as-is).
 2. **End-to-end apply** — run the full composition once (workspace+identity → app user + role →
-   fabric_connection → fabric_link) to confirm the provision POST (not just the `/entities` GET) succeeds
-   under the SP.
+   fabric_connection → fabric_link) to confirm the provision POST and subsequent refresh behavior under
+   the contained delegated alias.
 
 ## Consumed by
 

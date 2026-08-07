@@ -47,7 +47,7 @@ func (r *FabricLinkResource) Schema(ctx context.Context, req resource.SchemaRequ
 	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
 	defer exitContext()
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Dataverse **Link to Microsoft Fabric** (an Azure Synapse Link profile, `synapselinkprofile`, targeting a Fabric workspace). A Dataverse environment links 1:1 to a Fabric workspace, so this is an environment singleton. The created mirror lakehouse + workspace ids are exposed as computed attributes for downstream Fabric items to reference by stable id. **Preview/scaffold:** the Fabric target payload is not yet wired — see DESIGN.md.",
+		MarkdownDescription: "Manages a Dataverse **Link to Microsoft Fabric** (an Azure Synapse Link profile, `synapselinkprofile`, targeting a Fabric workspace). A Dataverse environment links 1:1 to a Fabric workspace, so this is an environment singleton. The created mirror lakehouse + workspace ids are exposed as computed attributes for downstream Fabric items to reference by stable id. **Preview:** create and unlink are implemented; refresh currently preserves state and in-place updates are not supported — see DESIGN.md.",
 		Attributes: map[string]schema.Attribute{
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{Create: true, Delete: true, Read: true}),
 			"id": schema.StringAttribute{
