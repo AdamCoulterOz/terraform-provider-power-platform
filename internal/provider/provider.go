@@ -277,7 +277,7 @@ func (p *PowerPlatformProvider) Configure(ctx context.Context, req provider.Conf
 		configureUseOidc(ctx, p, tenantId, clientId, oidcRequestToken, azdoServiceConnectionId, oidcRequestUrl, oidcToken, oidcTokenFilePath, resp)
 	case useMsi:
 		configureUseMsi(ctx, p, clientId, auxiliaryTenantIDs)
-	case username != "" && password != "":
+	case username != "" || password != "":
 		configureUsernamePassword(ctx, p, tenantId, clientId, username, password, resp)
 	case clientCertificatePassword != "" && (clientCertificate != "" || clientCertificateFilePath != ""):
 		configureClientCertificate(ctx, p, tenantId, clientId, clientCertificate, clientCertificateFilePath, clientCertificatePassword, resp)
@@ -410,12 +410,18 @@ func configureClientSecret(ctx context.Context, p *PowerPlatformProvider, tenant
 
 func configureUsernamePassword(ctx context.Context, p *PowerPlatformProvider, tenantId, clientId, username, password string, resp *provider.ConfigureResponse) {
 	tflog.Info(ctx, "Using username and password (ROPC) for authentication")
+	if tenantId != "" && clientId != "" && username != "" && password != "" {
+		p.Config.TenantId = tenantId
+		p.Config.ClientId = clientId
+		p.Config.Username = username
+		p.Config.Password = password
+		return
+	}
+
 	validateProviderAttribute(resp, path.Root("tenant_id"), "tenant id", tenantId, constants.ENV_VAR_POWER_PLATFORM_TENANT_ID)
 	validateProviderAttribute(resp, path.Root("client_id"), "client id", clientId, constants.ENV_VAR_POWER_PLATFORM_CLIENT_ID)
-	p.Config.TenantId = tenantId
-	p.Config.ClientId = clientId
-	p.Config.Username = username
-	p.Config.Password = password
+	validateProviderAttribute(resp, path.Root("username"), "username", username, constants.ENV_VAR_POWER_PLATFORM_USERNAME)
+	validateProviderAttribute(resp, path.Root("password"), "password", password, constants.ENV_VAR_POWER_PLATFORM_PASSWORD)
 }
 
 func (p *PowerPlatformProvider) Resources(ctx context.Context) []func() resource.Resource {
