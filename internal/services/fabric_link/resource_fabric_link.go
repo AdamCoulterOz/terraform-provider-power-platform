@@ -5,6 +5,7 @@ package fabric_link
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -179,6 +181,18 @@ func (r *FabricLinkResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
+	// The link is an environment singleton: if the parent environment was deleted out of band the
+	// link is gone with it, so remove it from state instead of failing every future refresh/destroy
+	// (the upstream #1165 child-resource behavior). Any other probe error is treated as transient
+	// and state is preserved.
+	if _, err := r.FabricLinkClient.getBapEnvironment(ctx, state.EnvironmentId.ValueString()); err != nil {
+		if errors.Is(err, customerrors.ErrObjectNotFound) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		tflog.Warn(ctx, fmt.Sprintf("fabric_link read: environment probe failed, preserving state: %s", err.Error()))
+	}
+
 	// The link is server-managed by the athena service; a live read-back of the profile state
 	// (GET synapselinkprofiles / a status endpoint) is not yet wired (see DESIGN.md), so state is
 	// preserved as-is. TODO: read the synapselinkprofile status to detect drift / external unlink.
@@ -204,6 +218,10 @@ func (r *FabricLinkResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 	if err := r.FabricLinkClient.DeleteFabricLink(ctx, state.EnvironmentId.ValueString(), state.DatalakeFolderId.ValueString()); err != nil {
+		// A parent environment deleted out of band takes the link with it — already unlinked.
+		if errors.Is(err, customerrors.ErrObjectNotFound) {
+			return
+		}
 		resp.Diagnostics.AddError("Failed to unlink Link to Fabric", err.Error())
 	}
 }

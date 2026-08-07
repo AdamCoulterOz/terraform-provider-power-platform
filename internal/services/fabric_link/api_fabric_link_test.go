@@ -5,12 +5,14 @@ package fabric_link
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/config"
+	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +52,20 @@ func TestUnitDeleteFabricLinkTreatsNotFoundAsUnlinked(t *testing.T) {
 
 	err := newTestFabricLinkClient().DeleteFabricLink(context.Background(), testEnvironmentId, testFolderId)
 	require.NoError(t, err, "a missing datalakefolder means the link is already gone")
+}
+
+func TestUnitDeleteFabricLinkParentEnvironmentGone(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(http.MethodGet, testBapUrl, func(_ *http.Request) (*http.Response, error) {
+		return httpmock.NewStringResponse(http.StatusNotFound, `{"error":{"code":"EnvironmentNotFound","message":"The environment could not be found."}}`), nil
+	})
+
+	err := newTestFabricLinkClient().DeleteFabricLink(context.Background(), testEnvironmentId, testFolderId)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, customerrors.ErrObjectNotFound),
+		"a parent environment deleted out of band must surface as ErrObjectNotFound so Read/Delete can treat the link as gone")
 }
 
 func TestUnitDeleteFabricLinkEmptyFolderIdErrors(t *testing.T) {

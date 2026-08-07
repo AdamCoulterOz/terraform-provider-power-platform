@@ -14,6 +14,7 @@ import (
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
+	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 )
 
 // athenaResourceScope is the token resource the "athena" Synapse Link service requires
@@ -44,8 +45,12 @@ func (client *client) getBapEnvironment(ctx context.Context, environmentId strin
 	apiUrl.RawQuery = values.Encode()
 
 	env := bapEnvironmentDto{}
-	if _, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &env); err != nil {
+	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNotFound}, &env)
+	if err != nil {
 		return nil, fmt.Errorf("failed to get environment %s: %w", environmentId, err)
+	}
+	if resp != nil && resp.HttpResponse.StatusCode == http.StatusNotFound {
+		return nil, customerrors.WrapIntoProviderError(err, customerrors.ErrorCode(constants.ERROR_OBJECT_NOT_FOUND), fmt.Sprintf("environment %s not found", environmentId))
 	}
 	return &env, nil
 }
