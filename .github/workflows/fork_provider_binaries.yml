@@ -1,0 +1,139 @@
+# Temporary workflow for building forked provider binaries for CI consumption.
+name: Build Fork Provider Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Temporary provider version to stamp into the binaries and asset names.
+        required: true
+        default: "4.1.1-gitintegration.1"
+      publish_release:
+        description: Publish the built artifacts to a GitHub prerelease in this fork.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Provider Binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+        with:
+          egress-policy: audit
+
+      - name: Check out code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          cache: true
+          go-version-file: "go.mod"
+
+      - name: Build release archives
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          PROJECT_NAME="terraform-provider-power-platform"
+          BINARY_BASENAME="${PROJECT_NAME}_v${VERSION}"
+          LDFLAGS="-X github.com/microsoft/terraform-provider-power-platform/common.ProviderVersion=${VERSION} -X github.com/microsoft/terraform-provider-power-platform/common.Commit=${GITHUB_SHA} -X github.com/microsoft/terraform-provider-power-platform/common.Branch=${GITHUB_REF_NAME}"
+
+          build_target() {
+            local goos="$1"
+            local goarch="$2"
+            local ext="$3"
+
+            local stage_dir="dist/${goos}_${goarch}"
+            local binary_name="${BINARY_BASENAME}${ext}"
+            local archive_name="${PROJECT_NAME}_${VERSION}_${goos}_${goarch}.zip"
+
+            rm -rf "${stage_dir}"
+            mkdir -p "${stage_dir}"
+
+            GOOS="${goos}" GOARCH="${goarch}" go build \
+              -trimpath \
+              -ldflags "${LDFLAGS}" \
+              -o "${stage_dir}/${binary_name}" \
+              .
+
+            cp terraform-registry-manifest.json "${stage_dir}/terraform-registry-manifest.json"
+
+            (
+              cd "${stage_dir}"
+              zip -q "${PWD}/../${archive_name}" "${binary_name}" terraform-registry-manifest.json
+            )
+          }
+
+          build_target linux amd64 ""
+          build_target windows amd64 ".exe"
+          build_target darwin arm64 ""
+
+          (
+            cd dist
+            shasum -a 256 \
+              "${PROJECT_NAME}_${VERSION}_linux_amd64.zip" \
+              "${PROJECT_NAME}_${VERSION}_windows_amd64.zip" \
+              "${PROJECT_NAME}_${VERSION}_darwin_arm64.zip" \
+              > "${PROJECT_NAME}_${VERSION}_SHA256SUMS"
+          )
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: provider-binaries-${{ inputs.version }}
+          path: |
+            dist/*.zip
+            dist/*_SHA256SUMS
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          TAG="fork-v${VERSION}"
+          TITLE="Temporary fork build ${VERSION}"
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release delete "${TAG}" --yes --cleanup-tag
+          fi
+
+          gh release create "${TAG}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TITLE}" \
+            --notes "Temporary fork build for Azure DevOps pipeline consumption." \
+            --prerelease \
+            dist/*.zip \
+            dist/*_SHA256SUMS
+
+      - name: Write workflow summary
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          {
+            echo "## Fork Provider Binaries"
+            echo
+            echo "- Version: \`${VERSION}\`"
+            echo "- Targets: \`linux_amd64\`, \`windows_amd64\`, \`darwin_arm64\`"
+            echo "- Artifact bundle: \`provider-binaries-${VERSION}\`"
+            if [ "${{ inputs.publish_release }}" = "true" ]; then
+              echo "- Release tag: \`fork-v${VERSION}\`"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"

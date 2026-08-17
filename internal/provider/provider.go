@@ -135,6 +135,15 @@ func (p *PowerPlatformProvider) Schema(ctx context.Context, req provider.SchemaR
 				Optional:            true,
 				Sensitive:           true,
 			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: "The username (UPN) for Resource Owner Password Credentials (ROPC) authentication. For a contained delegated escape-hatch account used only where a Dataverse operation refuses app-only tokens. Requires `client_id`, `tenant_id` and `password`. The account must be exempt from MFA and Conditional Access.",
+				Optional:            true,
+			},
+			"password": schema.StringAttribute{
+				MarkdownDescription: "The password for Resource Owner Password Credentials (ROPC) authentication. Used with `username`.",
+				Optional:            true,
+				Sensitive:           true,
+			},
 			"client_certificate": schema.StringAttribute{
 				MarkdownDescription: "Base64 encoded PKCS#12 certificate bundle. For use when authenticating as a Service Principal using a Client Certificate.",
 				Optional:            true,
@@ -219,6 +228,8 @@ func (p *PowerPlatformProvider) Configure(ctx context.Context, req provider.Conf
 	auxiliaryTenantIDs := helpers.GetListStringValues(configValue.AuxiliaryTenantIDs, []string{constants.ENV_VAR_POWER_PLATFORM_AUXILIARY_TENANT_IDS, constants.ENV_VAR_ARM_AUXILIARY_TENANT_IDS}, []string{})
 	clientId := helpers.GetConfigString(ctx, configValue.ClientId, constants.ENV_VAR_POWER_PLATFORM_CLIENT_ID, "")
 	clientSecret := helpers.GetConfigString(ctx, configValue.ClientSecret, constants.ENV_VAR_POWER_PLATFORM_CLIENT_SECRET, "")
+	username := helpers.GetConfigString(ctx, configValue.Username, constants.ENV_VAR_POWER_PLATFORM_USERNAME, "")
+	password := helpers.GetConfigString(ctx, configValue.Password, constants.ENV_VAR_POWER_PLATFORM_PASSWORD, "")
 	useOidc := helpers.GetConfigBool(ctx, configValue.UseOidc, constants.ENV_VAR_POWER_PLATFORM_USE_OIDC, false)
 	useCli := helpers.GetConfigBool(ctx, configValue.UseCli, constants.ENV_VAR_POWER_PLATFORM_USE_CLI, false)
 	useDevCli := helpers.GetConfigBool(ctx, configValue.UseDevCli, constants.ENV_VAR_POWER_PLATFORM_USE_DEV_CLI, false)
@@ -268,6 +279,8 @@ func (p *PowerPlatformProvider) Configure(ctx context.Context, req provider.Conf
 		configureUseOidc(ctx, p, tenantId, clientId, oidcRequestToken, azdoServiceConnectionId, oidcRequestUrl, oidcToken, oidcTokenFilePath, resp)
 	case useMsi:
 		configureUseMsi(ctx, p, clientId, auxiliaryTenantIDs)
+	case username != "" || password != "":
+		configureUsernamePassword(ctx, p, tenantId, clientId, username, password, resp)
 	case clientCertificatePassword != "" && (clientCertificate != "" || clientCertificateFilePath != ""):
 		configureClientCertificate(ctx, p, tenantId, clientId, clientCertificate, clientCertificateFilePath, clientCertificatePassword, resp)
 	default:
@@ -395,6 +408,22 @@ func configureClientSecret(ctx context.Context, p *PowerPlatformProvider, tenant
 		validateProviderAttribute(resp, path.Root("client_id"), "client id", clientId, constants.ENV_VAR_POWER_PLATFORM_CLIENT_ID)
 		validateProviderAttribute(resp, path.Root("client_secret"), "client secret", clientSecret, constants.ENV_VAR_POWER_PLATFORM_CLIENT_SECRET)
 	}
+}
+
+func configureUsernamePassword(ctx context.Context, p *PowerPlatformProvider, tenantId, clientId, username, password string, resp *provider.ConfigureResponse) {
+	tflog.Info(ctx, "Using username and password (ROPC) for authentication")
+	if tenantId != "" && clientId != "" && username != "" && password != "" {
+		p.Config.TenantId = tenantId
+		p.Config.ClientId = clientId
+		p.Config.Username = username
+		p.Config.Password = password
+		return
+	}
+
+	validateProviderAttribute(resp, path.Root("tenant_id"), "tenant id", tenantId, constants.ENV_VAR_POWER_PLATFORM_TENANT_ID)
+	validateProviderAttribute(resp, path.Root("client_id"), "client id", clientId, constants.ENV_VAR_POWER_PLATFORM_CLIENT_ID)
+	validateProviderAttribute(resp, path.Root("username"), "username", username, constants.ENV_VAR_POWER_PLATFORM_USERNAME)
+	validateProviderAttribute(resp, path.Root("password"), "password", password, constants.ENV_VAR_POWER_PLATFORM_PASSWORD)
 }
 
 func (p *PowerPlatformProvider) Resources(ctx context.Context) []func() resource.Resource {

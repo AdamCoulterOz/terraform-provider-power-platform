@@ -39,6 +39,11 @@ type ProviderConfig struct {
 	ClientId           string
 	ClientSecret       string
 
+	// Resource Owner Password Credentials (ROPC). Used only for the contained delegated escape-hatch
+	// account (e.g. SVC.ELMO) where a Dataverse operation refuses app-only tokens. Discouraged generally.
+	Username string
+	Password string
+
 	ClientCertificatePassword string
 	ClientCertificateRaw      string
 
@@ -121,6 +126,10 @@ func (model *ProviderConfig) IsClientSecretCredentialsProvided() bool {
 	return model.ClientId != "" && model.ClientSecret != "" && model.TenantId != ""
 }
 
+func (model *ProviderConfig) IsClientUsernamePasswordCredentialsProvided() bool {
+	return model.ClientId != "" && model.Username != "" && model.Password != "" && model.TenantId != ""
+}
+
 func (model *ProviderConfig) IsClientCertificateCredentialsProvided() bool {
 	return model.ClientCertificateRaw != ""
 }
@@ -153,6 +162,9 @@ type ProviderConfigModel struct {
 	AuxiliaryTenantIDs types.List   `tfsdk:"auxiliary_tenant_ids"`
 	ClientId           types.String `tfsdk:"client_id"`
 	ClientSecret       types.String `tfsdk:"client_secret"`
+
+	Username types.String `tfsdk:"username"`
+	Password types.String `tfsdk:"password"`
 
 	ClientCertificateFilePath types.String `tfsdk:"client_certificate_file_path"`
 	ClientCertificate         types.String `tfsdk:"client_certificate"`
