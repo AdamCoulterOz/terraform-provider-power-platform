@@ -20,6 +20,7 @@ import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
+	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func NewEnvironmentApplicationAdminResource() resource.Resource {
@@ -34,6 +35,7 @@ func NewEnvironmentApplicationAdminResource() resource.Resource {
 type EnvironmentApplicationAdminResource struct {
 	helpers.TypeInfo
 	ApplicationClient client
+	EnvironmentClient environment.Client
 }
 
 // EnvironmentApplicationAdminResourceModel describes the resource data model.
@@ -110,6 +112,7 @@ func (r *EnvironmentApplicationAdminResource) Configure(ctx context.Context, req
 		return
 	}
 	r.ApplicationClient = newApplicationClient(client.Api)
+	r.EnvironmentClient = environment.NewEnvironmentClient(client.Api)
 }
 
 func (r *EnvironmentApplicationAdminResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -188,6 +191,12 @@ func (r *EnvironmentApplicationAdminResource) Read(ctx context.Context, req reso
 			resp.State.RemoveResource(ctx)
 			return
 		}
+		// For ambiguous errors, check whether the parent environment still exists.
+		_, envErr := r.EnvironmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+		if errors.Is(envErr, customerrors.ErrObjectNotFound) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Failed to check if application user '%s' exists in environment '%s'", state.ApplicationId.ValueString(), state.EnvironmentId.ValueString()),
 			err.Error(),
@@ -261,7 +270,7 @@ func (r *EnvironmentApplicationAdminResource) Delete(ctx context.Context, req re
 	}
 
 	// Now delete the system user
-	err = r.ApplicationClient.DeleteSystemUser(ctx, state.EnvironmentId.ValueString(), systemUserId)
+	err = r.ApplicationClient.PermanentlyDeleteSystemUser(ctx, state.EnvironmentId.ValueString(), systemUserId)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Failed to delete system user for application '%s' in environment '%s'",

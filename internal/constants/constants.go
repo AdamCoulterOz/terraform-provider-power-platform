@@ -137,11 +137,23 @@ const (
 	API_VERSION_PARAM         = "api-version"
 
 	DEFAULT_TERRAFORM_PARTNER_ID = "222c6c49-1b0a-5959-a213-6608f9eb8820"
+	HEADER_X_MS_USERAGENT        = "terraform-provider-power-platform"
 )
 
 const (
 	DEFAULT_RESOURCE_OPERATION_TIMEOUT_IN_MINUTES = 20 * time.Minute
 	MAX_RETRY_COUNT                               = 10
+)
+
+// PROTECTION_LEVEL_STANDARD is the governance configuration protection level of a
+// managed environment. Anything else (for example "Basic") is not managed.
+const PROTECTION_LEVEL_STANDARD = "Standard"
+
+// The BAP read endpoint is eventually consistent with the regional lifecycle operation that applies
+// generative AI settings, so the values are re-read until they converge.
+const (
+	ENVIRONMENT_AI_FEATURES_POLL_INTERVAL = 3 * time.Second
+	ENVIRONMENT_AI_FEATURES_POLL_TIMEOUT  = 20 * time.Second
 )
 
 const (
