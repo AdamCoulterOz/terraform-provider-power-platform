@@ -40,9 +40,11 @@ import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/licensing"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/locations"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/managed_environment"
+	managedsolution "github.com/microsoft/terraform-provider-power-platform/internal/services/managed_solution"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/powerapps"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/publisher"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/rest"
+	"github.com/microsoft/terraform-provider-power-platform/internal/services/role_based_access"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/solution"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/solution_checker_rules"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
@@ -78,6 +80,10 @@ func TestUnitPowerPlatformProviderHasChildDataSources_Basic(t *testing.T) {
 		capacity.NewTenantCapcityDataSource(),
 		tenant.NewTenantDataSource(),
 		solution_checker_rules.NewSolutionCheckerRulesDataSource(),
+		role_based_access.NewRoleDefinitionsDataSource(),
+		role_based_access.NewRoleBasedAccessAssignmentsDataSource(),
+		role_based_access.NewEnvironmentRoleBasedAccessAssignmentsDataSource(),
+		role_based_access.NewEnvironmentGroupRoleBasedAccessAssignmentsDataSource(),
 	}
 	datasources := provider.NewPowerPlatformProvider(context.Background())().(*provider.PowerPlatformProvider).DataSources(context.Background())
 
@@ -96,6 +102,7 @@ func TestUnitPowerPlatformProviderHasChildResources_Basic(t *testing.T) {
 		solution.NewSolutionResource(),
 		tenant_settings.NewTenantSettingsResource(),
 		managed_environment.NewManagedEnvironmentResource(),
+		managedsolution.NewManagedSolutionResource(),
 		environmentvariable.NewEnvironmentVariableResource(),
 		fabric_link.NewFabricLinkResource(),
 		licensing.NewBillingPolicyResource(),
@@ -114,7 +121,12 @@ func TestUnitPowerPlatformProviderHasChildResources_Basic(t *testing.T) {
 		tenant_isolation_policy.NewTenantIsolationPolicyResource(),
 		environment_wave.NewEnvironmentWaveResource(),
 		application.NewEnvironmentApplicationAdminResource(),
+		application.NewApplicationUserResource(),
+		application.NewRoleAssignmentResource(),
 		disaster_recovery.NewDisasterRecoveryResource(),
+		role_based_access.NewRoleBasedAccessAssignmentResource(),
+		role_based_access.NewEnvironmentGroupRoleBasedAccessAssignmentResource(),
+		role_based_access.NewEnvironmentRoleBasedAccessAssignmentResource(),
 	}
 	resources := provider.NewPowerPlatformProvider(context.Background())().(*provider.PowerPlatformProvider).Resources(context.Background())
 
