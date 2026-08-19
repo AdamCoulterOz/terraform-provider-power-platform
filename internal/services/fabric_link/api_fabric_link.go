@@ -27,6 +27,8 @@ const athenaResourceScope = "7f15f9d9-cad0-44f1-bbba-d36650e07765/.default"
 
 // operation-local ceiling so a deterministic service failure does not consume the provider's
 // full resource-operation timeout. A shorter caller deadline still wins.
+const athenaOrganizationIdHeader = "x-ms-organization-id"
+
 const fabricLinkDeleteRetryTimeout = 2 * time.Minute
 
 const maxFabricLinkErrorBodyBytes = 2048
@@ -118,7 +120,8 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 	// athena establishes the Dataverse organization context from the x-ms-organization-id HEADER (not the
 	// body's OrganizationId). Without it the POST fails 404 "DatalakefolderNotFoundException ... the
 	// organization context does not have an OrganizationId". The maker portal sends this header; mirror it.
-	headers := http.Header{"x-ms-organization-id": {env.Properties.LinkedEnvironmentMetadata.ResourceId}}
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, env.Properties.LinkedEnvironmentMetadata.ResourceId)
 	// A 403 (empty body) on an org that has NEVER been linked means the org isn't registered with the
 	// athena island yet. The maker portal wizard handles this exact case: 403 -> POST
 	// updateorganizationdetails -> retry (HAR-verified on a virgin org). Accept 403 here so we can
@@ -170,7 +173,8 @@ func (client *client) updateOrganizationDetails(ctx context.Context, environment
 		Path:     fmt.Sprintf("/environment/%s/updateorganizationdetails", environmentId),
 		RawQuery: values.Encode(),
 	}
-	headers := http.Header{"x-ms-organization-id": {orgId}}
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, orgId)
 	body := map[string]map[string]string{"headers": {"x-ms-organization-id": orgId}}
 	if _, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), headers, body, []int{http.StatusOK, http.StatusNoContent}, nil); err != nil {
 		return fmt.Errorf("failed to register organization %s with the athena island: %w", orgId, err)
@@ -240,7 +244,12 @@ func (client *client) DeleteFabricLink(ctx context.Context, environmentId, datal
 	deleteCtx, cancel := context.WithTimeout(ctx, retryTimeout)
 	defer cancel()
 
-	resp, err := client.Api.Execute(deleteCtx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent, http.StatusNotFound}, nil)
+	// athena resolves the Dataverse organization from this header on every environment-scoped call.
+	// Without it the unlink cannot resolve the organization even though the environment id is in the path.
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, env.Properties.LinkedEnvironmentMetadata.ResourceId)
+
+	resp, err := client.Api.Execute(deleteCtx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), headers, nil, []int{http.StatusOK, http.StatusNoContent, http.StatusNotFound}, nil)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to unlink Link to Fabric for environment %s after retrying within %s%s: %w",

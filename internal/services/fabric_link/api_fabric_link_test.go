@@ -32,13 +32,16 @@ func TestUnitDeleteFabricLinkDeletesDatalakeFolderViaAthena(t *testing.T) {
 	registerFabricLinkEnvironment(t)
 
 	deleteCalls := 0
-	httpmock.RegisterResponder(http.MethodDelete, testDeleteUrl, func(_ *http.Request) (*http.Response, error) {
+	var sentOrganizationId string
+	httpmock.RegisterResponder(http.MethodDelete, testDeleteUrl, func(req *http.Request) (*http.Response, error) {
 		deleteCalls++
+		sentOrganizationId = req.Header.Get("x-ms-organization-id")
 		return httpmock.NewStringResponse(http.StatusNoContent, ""), nil
 	})
 
 	err := newTestFabricLinkClient().DeleteFabricLink(context.Background(), testEnvironmentId, testFolderId)
 	require.NoError(t, err)
+	assert.Equal(t, testOrganizationId, sentOrganizationId, "athena resolves the organization from this header on the unlink")
 	assert.Equal(t, 1, deleteCalls, "unlink issues exactly one DELETE against the derived athena host")
 }
 
