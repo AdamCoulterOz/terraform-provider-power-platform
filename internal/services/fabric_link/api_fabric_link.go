@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
@@ -23,12 +24,25 @@ import (
 // the capture only proves delegated (user_impersonation) works.
 const athenaResourceScope = "7f15f9d9-cad0-44f1-bbba-d36650e07765/.default"
 
+const athenaOrganizationIdHeader = "x-ms-organization-id"
+
+// The athena unlink endpoint is synchronous. Keep its transport retries inside a short,
+// operation-local ceiling so a deterministic service failure does not consume the provider's
+// full resource-operation timeout. A shorter caller deadline still wins.
+const fabricLinkDeleteRetryTimeout = 2 * time.Minute
+
+const maxFabricLinkErrorBodyBytes = 2048
+
 func newFabricLinkClient(apiClient *api.Client) client {
-	return client{Api: apiClient}
+	return client{
+		Api:                apiClient,
+		deleteRetryTimeout: fabricLinkDeleteRetryTimeout,
+	}
 }
 
 type client struct {
-	Api *api.Client
+	Api                *api.Client
+	deleteRetryTimeout time.Duration
 }
 
 // getBapEnvironment reads the BAP environment to resolve the Dataverse org info and the
@@ -102,7 +116,8 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 	// athena establishes the Dataverse organization context from the x-ms-organization-id HEADER (not the
 	// body's OrganizationId). Without it the POST fails 404 "DatalakefolderNotFoundException ... the
 	// organization context does not have an OrganizationId". The maker portal sends this header; mirror it.
-	headers := http.Header{"x-ms-organization-id": {env.Properties.LinkedEnvironmentMetadata.ResourceId}}
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, env.Properties.LinkedEnvironmentMetadata.ResourceId)
 	// A 403 (empty body) on an org that has NEVER been linked means the org isn't registered with the
 	// athena island yet. The maker portal wizard handles this exact case: 403 -> POST
 	// updateorganizationdetails -> retry (HAR-verified on a virgin org). Accept 403 here so we can
@@ -154,7 +169,8 @@ func (client *client) updateOrganizationDetails(ctx context.Context, environment
 		Path:     fmt.Sprintf("/environment/%s/updateorganizationdetails", environmentId),
 		RawQuery: values.Encode(),
 	}
-	headers := http.Header{"x-ms-organization-id": {orgId}}
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, orgId)
 	body := map[string]map[string]string{"headers": {"x-ms-organization-id": orgId}}
 	if _, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "POST", apiUrl.String(), headers, body, []int{http.StatusOK, http.StatusNoContent}, nil); err != nil {
 		return fmt.Errorf("failed to register organization %s with the athena island: %w", orgId, err)
@@ -217,10 +233,49 @@ func (client *client) DeleteFabricLink(ctx context.Context, environmentId, datal
 		Path:     fmt.Sprintf("/environment/%s/lakehouseArtifacts/%s", environmentId, datalakeFolderId),
 		RawQuery: "dxt=false",
 	}
-	if _, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent, http.StatusNotFound}, nil); err != nil {
-		return fmt.Errorf("failed to unlink Link to Fabric for environment %s: %w", environmentId, err)
+
+	// athena requires the organization context on every environment-scoped call. Omitting this
+	// header leaves the unlink request unable to resolve the Dataverse organization even though the
+	// environment id is present in the path.
+	headers := make(http.Header)
+	headers.Set(athenaOrganizationIdHeader, env.Properties.LinkedEnvironmentMetadata.ResourceId)
+
+	retryTimeout := client.deleteRetryTimeout
+	if retryTimeout <= 0 {
+		retryTimeout = fabricLinkDeleteRetryTimeout
+	}
+	deleteCtx, cancel := context.WithTimeout(ctx, retryTimeout)
+	defer cancel()
+
+	// A 404 is not sufficient proof that the link is absent: athena also uses not-found responses
+	// when it cannot resolve organization/folder context. Until Read can verify live absence, fail
+	// loudly instead of silently dropping Terraform state.
+	resp, err := client.Api.Execute(deleteCtx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), headers, nil, []int{http.StatusOK, http.StatusNoContent}, nil)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to unlink Link to Fabric for environment %s after retrying within %s%s: %w",
+			environmentId,
+			retryTimeout,
+			formatLastFabricLinkHttpFailure(resp),
+			err,
+		)
 	}
 	return nil
+}
+
+func formatLastFabricLinkHttpFailure(resp *api.Response) string {
+	if resp == nil || resp.HttpResponse == nil {
+		return ""
+	}
+
+	body := strings.TrimSpace(string(resp.BodyAsBytes))
+	if len(body) > maxFabricLinkErrorBodyBytes {
+		body = body[:maxFabricLinkErrorBodyBytes] + "..."
+	}
+	if body == "" {
+		return fmt.Sprintf("; last HTTP status %d (%s)", resp.HttpResponse.StatusCode, resp.HttpResponse.Status)
+	}
+	return fmt.Sprintf("; last HTTP status %d (%s), body %q", resp.HttpResponse.StatusCode, resp.HttpResponse.Status, body)
 }
 
 func hostFromUrl(raw string) (string, error) {

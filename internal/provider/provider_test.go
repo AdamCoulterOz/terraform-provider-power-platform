@@ -35,6 +35,7 @@ import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment_templates"
 	environmentvariable "github.com/microsoft/terraform-provider-power-platform/internal/services/environment_variable"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment_wave"
+	"github.com/microsoft/terraform-provider-power-platform/internal/services/fabric_link"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/git_integration"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/languages"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/licensing"
@@ -119,6 +120,7 @@ func TestUnitPowerPlatformProviderHasChildResources_Basic(t *testing.T) {
 		tenant_isolation_policy.NewTenantIsolationPolicyResource(),
 		environment_wave.NewEnvironmentWaveResource(),
 		application.NewEnvironmentApplicationAdminResource(),
+		fabric_link.NewFabricLinkResource(),
 		application.NewApplicationUserResource(),
 		application.NewRoleAssignmentResource(),
 		disaster_recovery.NewDisasterRecoveryResource(),
