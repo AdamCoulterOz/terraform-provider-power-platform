@@ -79,10 +79,20 @@
 - managed solution bugfix to omit empty component parameters in managed solution requests
 - managed solution bugfix to fail on invalid managed solution dependencies
 - managed solution dependency validation ignores built-in Power Platform solution dependencies using an embedded built-in solution registry, while continuing to fail missing or outdated custom/package dependencies
+- managed solution versions are compared as up to four numeric segments with omitted trailing segments treated as zero; create/update state preserves the declared representation after Dataverse confirms an equivalent installed version, and read preserves it while the remote version remains equivalent
 - managed environment state handling now preserves known configured values and normalizes omitted optional computed values to null when the Power Platform API response omits governance settings immediately after apply, avoiding invalid unknown values in Terraform state
 - `powerplatform_managed_environment` must not apply managed-environment settings when the environment is already in an environment group; create and update paths both warn, preserve stable Terraform state, and avoid returning unknown values for ignored group-managed settings.
 - environment application user resource support
 - environment variable resource support
+- preview `powerplatform_fabric_link` support through the maker-portal athena orchestration flow
+- Fabric-link unlink sends the BAP environment's Dataverse organization id as `x-ms-organization-id`, targets the persisted `datalakefolderid`, accepts only confirmed `200`/`204` success, and bounds retryable DELETE failures to two minutes while preserving the final HTTP failure. Ambiguous `404` responses retain Terraform state.
+
+## Fabric-link constraints
+
+- Athena is undocumented implementation evidence derived from maker-portal captures; request changes require focused HTTP tests and live acceptance proof.
+- `Read` currently preserves state and does not detect an externally removed or failed link.
+- Import records only `id` and cannot reconstruct `environment_id` or `datalake_folder_id`; imported links are not yet safe to destroy.
+- Datalake-folder discovery currently prefers the observed `cds3_workspace` and falls back to `cds2_workspace`; it should eventually correlate the folder to the exact created link.
 
 ## Security group update bugfix
 
