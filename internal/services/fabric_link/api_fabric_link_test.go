@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
@@ -100,4 +101,27 @@ func newTestFabricLinkClient() *client {
 	}
 	apiClient := api.NewApiClientBase(&cfg, api.NewAuthBase(&cfg))
 	return &client{Api: apiClient}
+}
+
+func TestUnitDeleteFabricLinkStopsRetryingAtTheDeleteBound(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	registerFabricLinkEnvironment(t)
+
+	deleteCalls := 0
+	httpmock.RegisterResponder(http.MethodDelete, testDeleteUrl, func(_ *http.Request) (*http.Response, error) {
+		deleteCalls++
+		return httpmock.NewStringResponse(http.StatusServiceUnavailable, "athena is unavailable"), nil
+	})
+
+	fabricLinkClient := newTestFabricLinkClient()
+	fabricLinkClient.deleteRetryTimeout = 50 * time.Millisecond
+
+	started := time.Now()
+	err := fabricLinkClient.DeleteFabricLink(context.Background(), testEnvironmentId, testFolderId)
+
+	require.Error(t, err, "a service that never succeeds must not retry forever")
+	assert.Less(t, time.Since(started), 30*time.Second, "the delete must give up at its own bound")
+	assert.Greater(t, deleteCalls, 0, "the delete should have been attempted")
+	assert.Contains(t, err.Error(), "after retrying within", "the error should say the unlink was bounded")
 }

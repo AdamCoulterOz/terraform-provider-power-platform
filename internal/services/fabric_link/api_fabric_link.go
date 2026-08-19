@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
@@ -24,12 +25,22 @@ import (
 // contained username/password provider alias rather than the default app-only pipeline identity.
 const athenaResourceScope = "7f15f9d9-cad0-44f1-bbba-d36650e07765/.default"
 
+// operation-local ceiling so a deterministic service failure does not consume the provider's
+// full resource-operation timeout. A shorter caller deadline still wins.
+const fabricLinkDeleteRetryTimeout = 2 * time.Minute
+
+const maxFabricLinkErrorBodyBytes = 2048
+
 func newFabricLinkClient(apiClient *api.Client) client {
-	return client{Api: apiClient}
+	return client{
+		Api:                apiClient,
+		deleteRetryTimeout: fabricLinkDeleteRetryTimeout,
+	}
 }
 
 type client struct {
-	Api *api.Client
+	Api                *api.Client
+	deleteRetryTimeout time.Duration
 }
 
 // getBapEnvironment reads the BAP environment to resolve the Dataverse org info and the
@@ -222,8 +233,22 @@ func (client *client) DeleteFabricLink(ctx context.Context, environmentId, datal
 		Path:     fmt.Sprintf("/environment/%s/lakehouseArtifacts/%s", environmentId, datalakeFolderId),
 		RawQuery: "dxt=false",
 	}
-	if _, err := client.Api.Execute(ctx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent, http.StatusNotFound}, nil); err != nil {
-		return fmt.Errorf("failed to unlink Link to Fabric for environment %s: %w", environmentId, err)
+	retryTimeout := client.deleteRetryTimeout
+	if retryTimeout <= 0 {
+		retryTimeout = fabricLinkDeleteRetryTimeout
+	}
+	deleteCtx, cancel := context.WithTimeout(ctx, retryTimeout)
+	defer cancel()
+
+	resp, err := client.Api.Execute(deleteCtx, []string{athenaResourceScope}, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent, http.StatusNotFound}, nil)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to unlink Link to Fabric for environment %s after retrying within %s%s: %w",
+			environmentId,
+			retryTimeout,
+			formatLastFabricLinkHttpFailure(resp),
+			err,
+		)
 	}
 	return nil
 }
@@ -249,4 +274,19 @@ func decodeArtifactsResponse(raw []byte) (*lakehouseArtifactsResponseDto, error)
 		return nil, err
 	}
 	return &out, nil
+}
+
+func formatLastFabricLinkHttpFailure(resp *api.Response) string {
+	if resp == nil || resp.HttpResponse == nil {
+		return ""
+	}
+
+	body := strings.TrimSpace(string(resp.BodyAsBytes))
+	if len(body) > maxFabricLinkErrorBodyBytes {
+		body = body[:maxFabricLinkErrorBodyBytes] + "..."
+	}
+	if body == "" {
+		return fmt.Sprintf("; last HTTP status %d (%s)", resp.HttpResponse.StatusCode, resp.HttpResponse.Status)
+	}
+	return fmt.Sprintf("; last HTTP status %d (%s), body %q", resp.HttpResponse.StatusCode, resp.HttpResponse.Status, body)
 }
