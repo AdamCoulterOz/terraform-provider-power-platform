@@ -168,9 +168,14 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 
 	if plan.EnvironmentId.ValueString() == state.EnvironmentId.ValueString() &&
 		plan.UniqueName.ValueString() == state.UniqueName.ValueString() &&
-		plan.Version.ValueString() == state.Version.ValueString() &&
+		solutionVersionsAreEquivalent(plan.Version.ValueString(), state.Version.ValueString()) &&
 		plan.ConnectionReferences.Equal(state.ConnectionReferences) &&
 		sourcesAreEquivalent(plan.Source, state.Source) {
+		// Terraform permits a configured attribute to retain either its exact
+		// configured value or its exact prior-state value. Reuse prior state for
+		// equivalent Dataverse version renderings so older canonicalized state
+		// does not cause an unnecessary managed-solution update.
+		plan.Version = state.Version
 		plan.Source = cloneSourceModel(state.Source)
 		plan.Id = state.Id
 		plan.SolutionId = state.SolutionId
@@ -257,6 +262,21 @@ func normalizeSolutionVersionOrOriginal(raw string) string {
 	return normalized
 }
 
+func solutionVersionsAreEquivalent(left string, right string) bool {
+	normalizedLeft, leftErr := normalizeSolutionVersion(left)
+	normalizedRight, rightErr := normalizeSolutionVersion(right)
+
+	return leftErr == nil && rightErr == nil && normalizedLeft == normalizedRight
+}
+
+func preserveEquivalentSolutionVersion(current string, remote string) string {
+	if solutionVersionsAreEquivalent(current, remote) {
+		return current
+	}
+
+	return normalizeSolutionVersionOrOriginal(remote)
+}
+
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	ctx, exitContext := helpers.EnterRequestContext(ctx, r.TypeInfo, req)
 	defer exitContext()
@@ -305,7 +325,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.SolutionId = types.StringValue(solutionState.Id)
 	state.DisplayName = types.StringValue(solutionState.DisplayName)
 	state.UniqueName = types.StringValue(solutionState.Name)
-	state.Version = types.StringValue(normalizeSolutionVersionOrOriginal(solutionState.Version))
+	state.Version = types.StringValue(preserveEquivalentSolutionVersion(state.Version.ValueString(), solutionState.Version))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -455,13 +475,24 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 		diagnostics.AddError("Unable to import managed solution", err.Error())
 		return nil
 	}
+	if !solutionVersionsAreEquivalent(plan.Version.ValueString(), solutionState.Version) {
+		diagnostics.AddError(
+			"Imported managed solution version mismatch",
+			fmt.Sprintf("Configured version %q does not match the installed solution version %q.", plan.Version.ValueString(), solutionState.Version),
+		)
+		return nil
+	}
 
 	result := *plan
 	result.Id = types.StringValue(fmt.Sprintf("%s_%s", plan.EnvironmentId.ValueString(), solutionState.Id))
 	result.SolutionId = types.StringValue(solutionState.Id)
 	result.DisplayName = types.StringValue(solutionState.DisplayName)
 	result.UniqueName = types.StringValue(solutionState.Name)
-	result.Version = types.StringValue(normalizeSolutionVersionOrOriginal(solutionState.Version))
+	// Dataverse renders missing version segments as zeroes (for example,
+	// 0.1.39 becomes 0.1.39.0). Preserve the planned representation after
+	// proving it is semantically equivalent so Terraform receives exactly the
+	// value it planned and does not report an inconsistent result after apply.
+	result.Version = plan.Version
 
 	return &result
 }

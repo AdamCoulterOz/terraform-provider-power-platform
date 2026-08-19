@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -82,10 +81,10 @@ func TestUnitManagedSolutionResource_Validate_Create_HappyPath(t *testing.T) {
 
 	mocks.ActivateEnvironmentHttpMocks()
 
-	solutionPath, err := filepath.Abs("../solution/tests/resource/Test_Files/TerraformSimpleTestSolution_1_0_0_1_managed.zip")
-	if err != nil {
-		t.Fatalf("failed to resolve solution path: %v", err)
-	}
+	solutionPath := createTestSolutionZip(t, map[string]string{
+		"solution.xml":       `<ImportExportXml><SolutionManifest><UniqueName>TerraformSimpleTestSolution</UniqueName><Version>1.0.0</Version><Managed>1</Managed><LocalizedNames><LocalizedName description="Terraform Simple Test Solution" /></LocalizedNames></SolutionManifest></ImportExportXml>`,
+		"customizations.xml": `<ImportExportXml />`,
+	})
 
 	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
 		func(req *http.Request) (*http.Response, error) {
@@ -173,7 +172,7 @@ func TestUnitManagedSolutionResource_Validate_Create_HappyPath(t *testing.T) {
       "friendlyname": "Terraform Simple Test Solution",
       "ismanaged": true,
       "createdon": "2024-01-01T00:00:00Z",
-      "version": "1.0.0.1",
+      "version": "1.0.0.0",
       "modifiedon": "2024-01-01T00:00:00Z",
       "installedon": "2024-01-01T00:00:00Z"
     }
@@ -186,28 +185,34 @@ func TestUnitManagedSolutionResource_Validate_Create_HappyPath(t *testing.T) {
 			return httpmock.NewStringResponse(http.StatusNoContent, ``), nil
 		})
 
-	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
-		ProtoV6ProviderFactories: mocks.TestUnitTestProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "powerplatform_managed_solution" "solution" {
   environment_id = "00000000-0000-0000-0000-000000000001"
   unique_name    = "TerraformSimpleTestSolution"
-  version        = "1.0.0.1"
+  version        = "1.0.0"
 
   source = {
     path = %q
   }
 }
-`, solutionPath),
+`, solutionPath)
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV6ProviderFactories: mocks.TestUnitTestProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("powerplatform_managed_solution.solution", "unique_name", "TerraformSimpleTestSolution"),
-					resource.TestCheckResourceAttr("powerplatform_managed_solution.solution", "version", "1.0.0.1"),
+					resource.TestCheckResourceAttr("powerplatform_managed_solution.solution", "version", "1.0.0"),
 					resource.TestCheckResourceAttr("powerplatform_managed_solution.solution", "display_name", "Terraform Simple Test Solution"),
 					resource.TestCheckResourceAttr("powerplatform_managed_solution.solution", "solution_id", "86928ed8-df37-4ce2-add5-47030a833bff"),
 				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
 			},
 		},
 	})
