@@ -7,20 +7,22 @@ consistency across packages is the point.
 ## Harness contract (per boundary package)
 
 Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `athena`,
-`advisor`, `copilot`) has exactly this shape:
+`analytics`, `advisor`, `copilot`) has exactly this shape:
 
 - `doc.go` — package doc: which API, host, auth scope, spec status.
 - `client.go` — exactly:
   - `type Client struct { Api *api.Client }` (field exported).
   - `func NewClient(apiClient *api.Client) *Client`.
-  - `func (client *Client) scopes() []string` returning the boundary's OAuth
-    scope from config. For per-environment-host boundaries (`dataverse`,
-    `advisor`, `copilot`) it is `scopes(environmentHost string) []string`
-    returning `{"https://" + environmentHost + "/.default"}` (or the boundary's
-    fixed scope constant where one exists).
+  - Scope resolution: most boundaries have `func (client *Client) scopes() []string`
+    returning the boundary's OAuth scope — from config (`bapi`, `ppapi`,
+    `powerapps`, `advisor`, `analytics`) or a fixed constant (`athena`,
+    `copilot`). `dataverse` instead has a package-level
+    `scopes(environmentHost string) []string` returning
+    `{"https://" + environmentHost + "/.default"}`.
   - `func (client *Client) host() string` returning the boundary host from
-    config. Omitted for per-environment-host boundaries; those take the host as
-    a method parameter.
+    config. Omitted where the host is per-environment (`dataverse`, `advisor`,
+    `copilot` take it as a method parameter) or derived (`analytics` maps a
+    region to a regional URL).
 - `<domain>.go` — operations for one resource domain (e.g. `environments.go`,
   `tenant.go`). Receiver is always `client *Client`.
 - `<domain>_dtos.go` — the wire DTOs for that domain, all exported.
