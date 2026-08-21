@@ -129,7 +129,7 @@ func (r *EnvironmentGroupResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	environmentGroupToCreate := environmentGroupDto{
+	environmentGroupToCreate := bapi.EnvironmentGroupDto{
 		DisplayName: plan.DisplayName.ValueString(),
 		Description: plan.Description.ValueString(),
 	}
@@ -165,7 +165,7 @@ func (r *EnvironmentGroupResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	environmentGroupToUpdate := environmentGroupDto{
+	environmentGroupToUpdate := bapi.EnvironmentGroupDto{
 		Id:          plan.Id.ValueString(),
 		DisplayName: plan.DisplayName.ValueString(),
 		Description: plan.Description.ValueString(),

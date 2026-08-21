@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -232,13 +233,13 @@ func (r *ShareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	share := shareConnectionRequestDto{
-		Put: []shareConnectionRequestPutDto{
+	share := ppapi.ShareConnectionRequestDto{
+		Put: []ppapi.ShareConnectionRequestPutDto{
 			{
-				Properties: shareConnectionRequestPutPropertiesDto{
+				Properties: ppapi.ShareConnectionRequestPutPropertiesDto{
 					RoleName:     plan.RoleName.ValueString(),
 					Capabilities: []any{},
-					Principal: shareConnectionRequestPutPropertiesPrincipalDto{
+					Principal: ppapi.ShareConnectionRequestPutPropertiesPrincipalDto{
 						Id:       plan.Principal.EntraObjectId.ValueString(),
 						Type:     "ServicePrincipal",
 						TenantId: nil,
@@ -247,7 +248,7 @@ func (r *ShareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				},
 			},
 		},
-		Delete: []shareConnectionRequestDeleteDto{},
+		Delete: []ppapi.ShareConnectionRequestDeleteDto{},
 	}
 
 	err := r.ConnectionsClient.UpdateConnectionShare(ctx, plan.EnvironmentId.ValueString(), plan.ConnectorName.ValueString(), plan.ConnectionId.ValueString(), share)
@@ -298,12 +299,12 @@ func (r *ShareResource) ImportState(ctx context.Context, req resource.ImportStat
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func convertFromConnectionResourceSharesDto(oldPlan *ShareResourceModel, connection *shareConnectionResponseDto) (*ShareResourceModel, error) {
-	entraObjectId, err := getPrincipalString(connection.Properties.Principal, "id")
+func convertFromConnectionResourceSharesDto(oldPlan *ShareResourceModel, connection *ppapi.ShareConnectionResponseDto) (*ShareResourceModel, error) {
+	entraObjectId, err := ppapi.GetPrincipalString(connection.Properties.Principal, "id")
 	if err != nil {
 		return nil, err
 	}
-	displayName, err := getPrincipalString(connection.Properties.Principal, "displayName")
+	displayName, err := ppapi.GetPrincipalString(connection.Properties.Principal, "displayName")
 	if err != nil {
 		return nil, err
 	}

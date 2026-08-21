@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -143,7 +144,7 @@ func (d *ConnectionsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 }
 
-func ConvertFromConnectionDto(connection connectionDto) ConnectionsDataSourceModel {
+func ConvertFromConnectionDto(connection ppapi.ConnectionDto) ConnectionsDataSourceModel {
 	nameConnectorSplit := strings.Split(connection.Properties.ApiId, "/")
 	nameConnector := nameConnectorSplit[len(nameConnectorSplit)-1]
 

@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -154,10 +155,10 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	connectionToCreate := createDto{
-		Properties: createPropertiesDto{
+	connectionToCreate := ppapi.ConnectionCreateDto{
+		Properties: ppapi.ConnectionCreatePropertiesDto{
 			DisplayName: plan.DisplayName.ValueString(),
-			Environment: createEnvironmentDto{
+			Environment: ppapi.ConnectionCreateEnvironmentDto{
 				Name: plan.EnvironmentId.ValueString(),
 				Id:   fmt.Sprintf("/providers/Microsoft.PowerApps/environments/%s", plan.EnvironmentId.ValueString()),
 			},

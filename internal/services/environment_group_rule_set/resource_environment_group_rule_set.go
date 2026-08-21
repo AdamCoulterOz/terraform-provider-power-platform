@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -418,7 +419,7 @@ func (r *environmentGroupRuleSetResource) Configure(ctx context.Context, req res
 }
 
 // readRuleSet returns the legacy rule set for the group, or nil when the group has none.
-func (r *environmentGroupRuleSetResource) readRuleSet(ctx context.Context, environmentGroupId string) (*EnvironmentGroupRuleSetValueSetDto, error) {
+func (r *environmentGroupRuleSetResource) readRuleSet(ctx context.Context, environmentGroupId string) (*ppapi.EnvironmentGroupRuleSetValueSetDto, error) {
 	ruleSet, err := r.EnvironmentGroupRuleSetClient.GetEnvironmentGroupRuleSet(ctx, environmentGroupId)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
@@ -430,8 +431,8 @@ func (r *environmentGroupRuleSetResource) readRuleSet(ctx context.Context, envir
 }
 
 // readPolicy returns the rule-based policy assigned to the group, or nil when none is assigned.
-func (r *environmentGroupRuleSetResource) readPolicy(ctx context.Context, environmentGroupId string) (*ruleBasedPolicyDto, error) {
-	assignments, err := r.EnvironmentGroupRuleSetClient.listAssignmentsByEnvironmentGroup(ctx, environmentGroupId)
+func (r *environmentGroupRuleSetResource) readPolicy(ctx context.Context, environmentGroupId string) (*ppapi.RuleBasedPolicyDto, error) {
+	assignments, err := r.EnvironmentGroupRuleSetClient.ListAssignmentsByEnvironmentGroup(ctx, environmentGroupId)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +440,7 @@ func (r *environmentGroupRuleSetResource) readPolicy(ctx context.Context, enviro
 		return nil, nil
 	}
 
-	policy, err := r.EnvironmentGroupRuleSetClient.getPolicy(ctx, assignments[0].PolicyId)
+	policy, err := r.EnvironmentGroupRuleSetClient.GetPolicy(ctx, assignments[0].PolicyId)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			return nil, nil
@@ -457,7 +458,7 @@ func (r *environmentGroupRuleSetResource) applyPolicyRules(ctx context.Context, 
 	}
 
 	environmentGroupId := model.EnvironmentGroupId.ValueString()
-	assignments, err := r.EnvironmentGroupRuleSetClient.listAssignmentsByEnvironmentGroup(ctx, environmentGroupId)
+	assignments, err := r.EnvironmentGroupRuleSetClient.ListAssignmentsByEnvironmentGroup(ctx, environmentGroupId)
 	if err != nil {
 		return "", fmt.Errorf("failed to check existing policy assignments: %w", err)
 	}
@@ -467,7 +468,7 @@ func (r *environmentGroupRuleSetResource) applyPolicyRules(ctx context.Context, 
 		policyId := assignments[0].PolicyId
 		tflog.Debug(ctx, fmt.Sprintf("Adopting rule-based policy %s already assigned to environment group %s", policyId, environmentGroupId))
 
-		existingPolicy, err := r.EnvironmentGroupRuleSetClient.getPolicy(ctx, policyId)
+		existingPolicy, err := r.EnvironmentGroupRuleSetClient.GetPolicy(ctx, policyId)
 		if err != nil {
 			return "", fmt.Errorf("failed to get existing rule-based policy: %w", err)
 		}
@@ -482,26 +483,26 @@ func (r *environmentGroupRuleSetResource) applyPolicyRules(ctx context.Context, 
 				continue
 			}
 			tflog.Debug(ctx, fmt.Sprintf("Removing rule %s from policy %s", rs.Id, policyId))
-			if err := r.EnvironmentGroupRuleSetClient.removeRuleFromPolicy(ctx, policyId, existingPolicy.Name, rs.Id, rs.Version); err != nil {
+			if err := r.EnvironmentGroupRuleSetClient.RemoveRuleFromPolicy(ctx, policyId, existingPolicy.Name, rs.Id, rs.Version); err != nil {
 				return "", fmt.Errorf("failed to remove rule %s from rule-based policy: %w", rs.Id, err)
 			}
 		}
 
 		request.Name = existingPolicy.Name
 		request.RuleSets = mergePolicyRuleSets(existingPolicy.RuleSets, request.RuleSets)
-		if _, err := r.EnvironmentGroupRuleSetClient.updatePolicy(ctx, policyId, request); err != nil {
+		if _, err := r.EnvironmentGroupRuleSetClient.UpdatePolicy(ctx, policyId, request); err != nil {
 			return "", fmt.Errorf("failed to update rule-based policy: %w", err)
 		}
 		return policyId, nil
 	}
 
-	createdPolicy, err := r.EnvironmentGroupRuleSetClient.createPolicy(ctx, request)
+	createdPolicy, err := r.EnvironmentGroupRuleSetClient.CreatePolicy(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("failed to create rule-based policy: %w", err)
 	}
 
 	tflog.Debug(ctx, fmt.Sprintf("Assigning rule-based policy %s to environment group %s", createdPolicy.Id, environmentGroupId))
-	if _, err := r.EnvironmentGroupRuleSetClient.createEnvironmentGroupAssignment(ctx, createdPolicy.Id, environmentGroupId); err != nil {
+	if _, err := r.EnvironmentGroupRuleSetClient.CreateEnvironmentGroupAssignment(ctx, createdPolicy.Id, environmentGroupId); err != nil {
 		return "", fmt.Errorf("failed to assign rule-based policy to environment group: %w", err)
 	}
 
@@ -511,7 +512,7 @@ func (r *environmentGroupRuleSetResource) applyPolicyRules(ctx context.Context, 
 // releasePolicy deletes the policy when this resource created it, otherwise it only strips
 // the rule sets this resource manages so pre-existing configuration survives.
 func (r *environmentGroupRuleSetResource) releasePolicy(ctx context.Context, policyId, environmentGroupId string) error {
-	existingPolicy, err := r.EnvironmentGroupRuleSetClient.getPolicy(ctx, policyId)
+	existingPolicy, err := r.EnvironmentGroupRuleSetClient.GetPolicy(ctx, policyId)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			return nil
@@ -522,10 +523,10 @@ func (r *environmentGroupRuleSetResource) releasePolicy(ctx context.Context, pol
 	if existingPolicy.Name == terraformManagedPolicyName(environmentGroupId) {
 		// A policy cannot be deleted while it still has assignments.
 		tflog.Debug(ctx, fmt.Sprintf("Deleting rule-based policy %s created for environment group %s", policyId, environmentGroupId))
-		if err := r.EnvironmentGroupRuleSetClient.deleteEnvironmentGroupAssignment(ctx, policyId, environmentGroupId); err != nil {
+		if err := r.EnvironmentGroupRuleSetClient.DeleteEnvironmentGroupAssignment(ctx, policyId, environmentGroupId); err != nil {
 			return err
 		}
-		return r.EnvironmentGroupRuleSetClient.deletePolicy(ctx, policyId)
+		return r.EnvironmentGroupRuleSetClient.DeletePolicy(ctx, policyId)
 	}
 
 	present := make(map[string]bool, len(existingPolicy.RuleSets))
@@ -538,7 +539,7 @@ func (r *environmentGroupRuleSetResource) releasePolicy(ctx context.Context, pol
 			continue
 		}
 		tflog.Debug(ctx, fmt.Sprintf("Removing rule %s from adopted policy %s", ruleSetId, policyId))
-		if err := r.EnvironmentGroupRuleSetClient.removeRuleFromPolicy(ctx, policyId, existingPolicy.Name, ruleSetId, version); err != nil {
+		if err := r.EnvironmentGroupRuleSetClient.RemoveRuleFromPolicy(ctx, policyId, existingPolicy.Name, ruleSetId, version); err != nil {
 			return err
 		}
 	}
