@@ -543,7 +543,7 @@ func TestAccSolutionResource_Validate_Create_And_Force_Recreate(t *testing.T) {
 		t.Fatalf("Failed to write solution file: %s", err.Error())
 	}
 
-	settingsBeforeFileName := "test_acc_settings_before.json"
+	settingsBeforeFileName := filepath.Join(t.TempDir(), "test_acc_settings_before.json")
 	settingsBeforeContent := []byte(`{
 		"EnvironmentVariables": [
 		  {
@@ -558,7 +558,7 @@ func TestAccSolutionResource_Validate_Create_And_Force_Recreate(t *testing.T) {
 		t.Fatalf("Failed to write settings file: %s", err.Error())
 	}
 
-	settingsAfterFileName := "test_acc_settings_after.json"
+	settingsAfterFileName := filepath.Join(t.TempDir(), "test_acc_settings_after.json")
 	settingsAfterContent := []byte(`{
 		"EnvironmentVariables": [
 		  {
