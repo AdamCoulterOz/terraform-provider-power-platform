@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -136,7 +137,7 @@ func (r *environmentRoleBasedAccessAssignmentResource) Create(ctx context.Contex
 	envId := plan.EnvironmentId.ValueString()
 	tflog.Debug(ctx, fmt.Sprintf("Creating role assignment for principal %s in environment %s", plan.EnterpriseApplicationObjectId.ValueString(), envId))
 
-	request := roleAssignmentRequestDto{
+	request := ppapi.RoleAssignmentRequestDto{
 		PrincipalObjectId: plan.EnterpriseApplicationObjectId.ValueString(),
 		PrincipalType:     plan.PrincipalType.ValueString(),
 		RoleDefinitionId:  plan.RoleDefinitionId.ValueString(),
@@ -174,7 +175,7 @@ func (r *environmentRoleBasedAccessAssignmentResource) Read(ctx context.Context,
 		return
 	}
 
-	var found *roleAssignmentDto
+	var found *ppapi.RoleAssignmentDto
 	for i := range assignments {
 		if assignments[i].RoleAssignmentId == state.Id.ValueString() {
 			found = &assignments[i]

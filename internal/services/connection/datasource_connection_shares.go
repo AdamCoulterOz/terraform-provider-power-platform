@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -148,7 +149,7 @@ func (d *SharesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 }
 
-func ConvertFromConnectionSharesDto(connection shareConnectionResponseDto) SharesDataSourceModel {
+func ConvertFromConnectionSharesDto(connection ppapi.ShareConnectionResponseDto) SharesDataSourceModel {
 	share := SharesDataSourceModel{
 		Id:       types.StringValue(connection.Name),
 		RoleName: types.StringValue(connection.Properties.RoleName),

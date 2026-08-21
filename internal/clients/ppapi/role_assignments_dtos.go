@@ -1,18 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package role_based_access
+package ppapi
 
 // DTOs for the Power Platform Authorization RBAC API
 
-type roleAssignmentRequestDto struct {
+type RoleAssignmentRequestDto struct {
 	PrincipalObjectId string `json:"principalObjectId"`
 	PrincipalType     string `json:"principalType"`
 	RoleDefinitionId  string `json:"roleDefinitionId"`
 	Scope             string `json:"scope"`
 }
 
-type roleAssignmentDto struct {
+type RoleAssignmentDto struct {
 	RoleAssignmentId           string  `json:"roleAssignmentId"`
 	Scope                      string  `json:"scope"`
 	PrincipalType              string  `json:"principalType"`
@@ -24,16 +24,16 @@ type roleAssignmentDto struct {
 	ExpiresOn                  *string `json:"expiresOn"`
 }
 
-type roleAssignmentsListDto struct {
-	Value []roleAssignmentDto `json:"value"`
+type RoleAssignmentsListDto struct {
+	Value []RoleAssignmentDto `json:"value"`
 }
 
-type roleDefinitionDto struct {
+type RoleDefinitionDto struct {
 	RoleDefinitionId   string   `json:"roleDefinitionId"`
 	RoleDefinitionName string   `json:"roleDefinitionName"`
 	Permissions        []string `json:"permissions"`
 }
 
-type roleDefinitionsListDto struct {
-	Value []roleDefinitionDto `json:"value"`
+type RoleDefinitionsListDto struct {
+	Value []RoleDefinitionDto `json:"value"`
 }
