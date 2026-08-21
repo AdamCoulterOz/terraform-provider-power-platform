@@ -7,27 +7,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/advisor"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
 func newManagedEnvironmentClient(apiClient *api.Client) client {
 	return client{
-		Client: bapi.NewClient(apiClient),
+		Client:        bapi.NewClient(apiClient),
+		advisorClient: advisor.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	*bapi.Client
-}
-
-type SolutionCheckerRule struct {
-	Code string `json:"code"`
+	advisorClient *advisor.Client
 }
 
 // FetchSolutionCheckerRules resolves the environment's PowerApps Advisor
@@ -52,27 +48,13 @@ func (client *client) FetchSolutionCheckerRules(ctx context.Context, environment
 		return nil, fmt.Errorf("failed to parse PowerAppsAdvisor URL: %w", err)
 	}
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   powerAppsAdvisorUrl.Host,
-		Path:   "/api/rule",
-	}
-	values := url.Values{}
-	values.Add("api-version", "2.0")
-	// Currently, the ruleset is always the same for all regions
-	values.Add("ruleset", constants.SOLUTION_CHECKER_RULESET_ID)
-	apiUrl.RawQuery = values.Encode()
-
-	tflog.Debug(ctx, fmt.Sprintf("Constructed API URL: %s", apiUrl.String()))
-
-	solutionCheckerRulesArrayDto := []SolutionCheckerRule{}
-	_, err = client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &solutionCheckerRulesArrayDto)
+	rules, err := client.advisorClient.GetSolutionCheckerRules(ctx, powerAppsAdvisorUrl.Host)
 	if err != nil {
 		return nil, err
 	}
 
 	var codes []string
-	for _, rule := range solutionCheckerRulesArrayDto {
+	for _, rule := range rules {
 		codes = append(codes, rule.Code)
 	}
 

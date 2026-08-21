@@ -7,24 +7,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/copilot"
 )
 
 func newCopilotStudioClient(apiClient *api.Client) client {
 	return client{
-		Api:               apiClient,
+		Client:            copilot.NewClient(apiClient),
 		EnvironmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
-	Api               *api.Client
+	*copilot.Client
 	EnvironmentClient *bapi.Client
 }
 
@@ -53,7 +52,11 @@ func parseImportId(importId string) (envId string, botId string, err error) {
 	return parts[0], parts[1], nil
 }
 
-func (client *client) getCopilotStudioAppInsightsConfiguration(ctx context.Context, importId string) (*CopilotStudioAppInsightsDto, error) {
+// getCopilotStudioAppInsightsConfiguration resolves the environment's
+// PowerVirtualAgents runtime endpoint and tenant id via BAPI and then reads
+// the bot's Application Insights configuration from it. It spans two API
+// boundaries, so it stays in the service layer.
+func (client *client) getCopilotStudioAppInsightsConfiguration(ctx context.Context, importId string) (*copilot.CopilotStudioAppInsightsDto, error) {
 	environmentId, botId, err := parseImportId(importId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse import ID: %w", err)
@@ -72,25 +75,14 @@ func (client *client) getCopilotStudioAppInsightsConfiguration(ctx context.Conte
 		return nil, errors.New("TenantId value is not available in the environment properties")
 	}
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   copilotStudioEndpoint,
-		Path:   fmt.Sprintf("/api/botmanagement/2022-01-15/environments/%s/bots/%s/applicationinsightsconfiguration", environmentId, botId),
-	}
-	values := url.Values{}
-	apiUrl.RawQuery = values.Encode()
-
-	copilotStudioAppInsights := CopilotStudioAppInsightsDto{}
-	_, err = client.Api.Execute(ctx, []string{constants.COPILOT_SCOPE}, "GET", apiUrl.String(), http.Header{"x-cci-tenantid": {env.Properties.TenantId}}, nil, []int{http.StatusOK}, &copilotStudioAppInsights)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Copilot Studio application insights configuration: %w", err)
-	}
-	copilotStudioAppInsights.EnvironmentId = environmentId
-	copilotStudioAppInsights.BotId = botId
-	return &copilotStudioAppInsights, nil
+	return client.GetAppInsightsConfiguration(ctx, copilotStudioEndpoint, env.Properties.TenantId, environmentId, botId)
 }
 
-func (client *client) updateCopilotStudioAppInsightsConfiguration(ctx context.Context, copilotStudioAppInsightsConfig CopilotStudioAppInsightsDto, botId string) (*CopilotStudioAppInsightsDto, error) {
+// updateCopilotStudioAppInsightsConfiguration resolves the environment's
+// PowerVirtualAgents runtime endpoint and tenant id via BAPI and then updates
+// the bot's Application Insights configuration through it. It spans two API
+// boundaries, so it stays in the service layer.
+func (client *client) updateCopilotStudioAppInsightsConfiguration(ctx context.Context, copilotStudioAppInsightsConfig copilot.CopilotStudioAppInsightsDto, botId string) (*copilot.CopilotStudioAppInsightsDto, error) {
 	copilotStudioEndpoint, err := client.getCopilotStudioEndpoint(ctx, copilotStudioAppInsightsConfig.EnvironmentId)
 	if err != nil {
 		return nil, err
@@ -105,28 +97,5 @@ func (client *client) updateCopilotStudioAppInsightsConfiguration(ctx context.Co
 		return nil, errors.New("TenantId value is not available in the environment properties")
 	}
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   copilotStudioEndpoint,
-		Path:   fmt.Sprintf("/api/botmanagement/2022-01-15/environments/%s/bots/%s/applicationinsightsconfiguration", copilotStudioAppInsightsConfig.EnvironmentId, botId),
-	}
-	values := url.Values{}
-	apiUrl.RawQuery = values.Encode()
-
-	updatedCopilotStudioAppInsightsConfiguration := CopilotStudioAppInsightsDto{}
-
-	resp, err := client.Api.Execute(ctx, []string{constants.COPILOT_SCOPE}, "PUT", apiUrl.String(), http.Header{"x-cci-tenantid": {env.Properties.TenantId}}, copilotStudioAppInsightsConfig, []int{http.StatusOK, http.StatusInternalServerError}, &updatedCopilotStudioAppInsightsConfiguration)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update Copilot Studio application insights configuration: %w", err)
-	}
-	if resp.HttpResponse.StatusCode == http.StatusInternalServerError {
-		return nil, fmt.Errorf("error updating Application Insights configuration: %s", string(resp.BodyAsBytes))
-	}
-
-	if len(updatedCopilotStudioAppInsightsConfiguration.Errors) > 0 {
-		return nil, fmt.Errorf("error updating Application Insights configuration: %s", updatedCopilotStudioAppInsightsConfiguration.Errors)
-	}
-	updatedCopilotStudioAppInsightsConfiguration.EnvironmentId = copilotStudioAppInsightsConfig.EnvironmentId
-	updatedCopilotStudioAppInsightsConfiguration.BotId = botId
-	return &updatedCopilotStudioAppInsightsConfiguration, nil
+	return client.UpdateAppInsightsConfiguration(ctx, copilotStudioEndpoint, env.Properties.TenantId, copilotStudioAppInsightsConfig, botId)
 }
