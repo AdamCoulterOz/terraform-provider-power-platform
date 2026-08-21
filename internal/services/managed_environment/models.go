@@ -31,19 +31,3 @@ type ManagedEnvironmentResourceModel struct {
 	CopilotLimitSharingMode                types.String   `tfsdk:"copilot_limit_sharing_mode"` // noLimit, excludeSharingToSecurityGroups
 	CopilotMaxLimitUserSharing             types.Int64    `tfsdk:"copilot_max_limit_user_sharing"`
 }
-
-type SolutionCheckerRulesArrayDto struct {
-	Value []SolutionCheckerRuleDto `json:"value"`
-}
-
-type SolutionCheckerRuleDto struct {
-	Description     string `json:"description,omitempty"`
-	GuidanceUrl     string `json:"guidanceUrl,omitempty"`
-	Include         string `json:"include,omitempty"`
-	Code            string `json:"code,omitempty"`
-	Summary         string `json:"summary,omitempty"`
-	ComponetType    string `json:"componetType,omitempty"`
-	PrimaryCategory string `json:"primaryCategory,omitempty"`
-	Severity        string `json:"severity,omitempty"`
-	HowToFix        string `json:"howToFix,omitempty"`
-}

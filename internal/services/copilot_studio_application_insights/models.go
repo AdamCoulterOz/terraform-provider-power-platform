@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/copilot"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -26,12 +27,12 @@ type Resource struct {
 	CopilotStudioApplicationInsightsClient client
 }
 
-func createAppInsightsConfigDtoFromSourceModel(appInsightsConfigSource ResourceModel) (*CopilotStudioAppInsightsDto, error) {
+func createAppInsightsConfigDtoFromSourceModel(appInsightsConfigSource ResourceModel) (*copilot.CopilotStudioAppInsightsDto, error) {
 	if appInsightsConfigSource.EnvironmentId.ValueString() == "" {
 		return nil, errors.New("failed to create AppInsightsConfigDto: EnvironmentId cannot be empty")
 	}
 
-	appInsightsConfigDto := &CopilotStudioAppInsightsDto{
+	appInsightsConfigDto := &copilot.CopilotStudioAppInsightsDto{
 		EnvironmentId:               appInsightsConfigSource.EnvironmentId.ValueString(),
 		BotId:                       appInsightsConfigSource.BotId.ValueString(),
 		AppInsightsConnectionString: appInsightsConfigSource.AppInsightsConnectionString.ValueString(),
@@ -44,7 +45,7 @@ func createAppInsightsConfigDtoFromSourceModel(appInsightsConfigSource ResourceM
 	return appInsightsConfigDto, nil
 }
 
-func convertAppInsightsConfigModelFromDto(appInsightsConfigDto *CopilotStudioAppInsightsDto) (*ResourceModel, error) {
+func convertAppInsightsConfigModelFromDto(appInsightsConfigDto *copilot.CopilotStudioAppInsightsDto) (*ResourceModel, error) {
 	model := &ResourceModel{
 		Id:                          types.StringValue(fmt.Sprintf("%s_%s", appInsightsConfigDto.EnvironmentId, appInsightsConfigDto.BotId)),
 		EnvironmentId:               types.StringValue(appInsightsConfigDto.EnvironmentId),

@@ -6,40 +6,29 @@ package solution_checker_rules
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/advisor"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
 type Client struct {
-	Api               *api.Client
+	*advisor.Client
 	environmentClient *bapi.Client
 }
 
 func NewSolutionCheckerRulesClient(apiClient *api.Client) *Client {
 	return &Client{
-		Api:               apiClient,
+		Client:            advisor.NewClient(apiClient),
 		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
-// Data transfer objects.
-type RuleDto struct {
-	Code            string `json:"code"`
-	Description     string `json:"description"`
-	Summary         string `json:"summary"`
-	HowToFix        string `json:"howToFix"`
-	GuidanceUrl     string `json:"guidanceUrl"`
-	ComponentType   int    `json:"componentType"`
-	PrimaryCategory int    `json:"primaryCategory"`
-	Include         bool   `json:"include"`
-	Severity        int    `json:"severity"`
-}
-
-func (c *Client) GetSolutionCheckerRules(ctx context.Context, environmentId string) ([]RuleDto, error) {
+// GetSolutionCheckerRules resolves the environment's PowerApps Advisor
+// runtime endpoint via BAPI and then reads the solution checker ruleset from
+// it. It spans two API boundaries, so it stays in the service layer.
+func (c *Client) GetSolutionCheckerRules(ctx context.Context, environmentId string) ([]advisor.RuleDto, error) {
 	env, err := c.environmentClient.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get environment details for %s: %w", environmentId, err)
@@ -55,21 +44,7 @@ func (c *Client) GetSolutionCheckerRules(ctx context.Context, environmentId stri
 		return nil, fmt.Errorf("failed to parse PowerAppsAdvisor URL: %w", err)
 	}
 
-	// Now get the solution checker rules from the advisor endpoint with required query parameters
-	rulesBaseUrl := fmt.Sprintf("https://%s/api/rule", advisorURL.Host)
-	rulesUrl, err := url.Parse(rulesBaseUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse rules URL: %w", err)
-	}
-
-	// Add the required query parameters
-	queryParams := url.Values{}
-	queryParams.Add("ruleset", constants.SOLUTION_CHECKER_RULESET_ID)
-	queryParams.Add("api-version", "2.0")
-	rulesUrl.RawQuery = queryParams.Encode()
-
-	var rules []RuleDto
-	_, err = c.Api.Execute(ctx, nil, "GET", rulesUrl.String(), nil, nil, []int{http.StatusOK}, &rules)
+	rules, err := c.Client.GetSolutionCheckerRules(ctx, advisorURL.Host)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get solution checker rules: %w", err)
 	}

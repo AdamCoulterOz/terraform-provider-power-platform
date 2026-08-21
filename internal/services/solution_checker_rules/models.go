@@ -6,6 +6,7 @@ package solution_checker_rules
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/advisor"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -34,7 +35,7 @@ type RuleModel struct {
 }
 
 // Helper function to convert from DTO to Model.
-func convertFromRuleDto(rule RuleDto) RuleModel {
+func convertFromRuleDto(rule advisor.RuleDto) RuleModel {
 	return RuleModel{
 		Code:                       types.StringValue(rule.Code),
 		Description:                types.StringValue(rule.Description),

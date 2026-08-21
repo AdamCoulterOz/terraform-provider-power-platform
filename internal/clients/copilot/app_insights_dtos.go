@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package copilot_studio_application_insights
+package copilot
 
+// CopilotStudioAppInsightsDto is the Application Insights configuration of a
+// Copilot Studio bot as sent to and returned by the bot management API.
 type CopilotStudioAppInsightsDto struct {
 	EnvironmentId               string `json:"environmentId"`
 	BotId                       string `json:"botId"`
@@ -12,19 +14,4 @@ type CopilotStudioAppInsightsDto struct {
 	IncludeActions              bool   `json:"includeActions"`
 	Errors                      string `json:"errors"`
 	NetworkIsolation            string `json:"networkIsolation"`
-}
-
-type EnvironmentIdDto struct {
-	Id         string                     `json:"id"`
-	Name       string                     `json:"name"`
-	Properties EnvironmentIdPropertiesDto `json:"properties"`
-}
-
-type EnvironmentIdPropertiesDto struct {
-	TenantId         string              `json:"tenantId"`
-	RuntimeEndpoints RuntimeEndpointsDto `json:"runtimeEndpoints"`
-}
-
-type RuntimeEndpointsDto struct {
-	PowerVirtualAgents string `json:"microsoft.PowerVirtualAgents"`
 }
