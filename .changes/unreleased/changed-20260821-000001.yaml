@@ -1,5 +1,5 @@
 kind: changed
-body: Extract API transport, wire DTOs and single-boundary request logic into per-boundary client libraries under internal/clients (api, bapi, ppapi, dataverse, powerapps, athena, analytics, advisor, copilot). Duplicated environment and tenant lookups are consolidated onto canonical clients, which adds the canonical $expand query to those environment reads; all other requests are byte-identical
+body: Extract API transport, wire DTOs and single-boundary request logic into per-boundary client libraries under internal/clients (api, bapi, ppapi, dataverse, powerapps, admin, analytics, advisor, copilot). Duplicated environment and tenant lookups are consolidated onto canonical clients, which adds the canonical $expand query to those environment reads; all other requests are byte-identical
 time: 2026-08-21T00:00:01Z
 custom:
     Issue: "0"

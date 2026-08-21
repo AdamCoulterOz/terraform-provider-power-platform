@@ -6,7 +6,7 @@ consistency across packages is the point.
 
 ## Harness contract (per boundary package)
 
-Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `athena`,
+Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `admin`,
 `analytics`, `advisor`, `copilot`) has exactly this shape:
 
 - `doc.go` — package doc: which API, host, auth scope, spec status.
@@ -15,7 +15,7 @@ Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `athena`,
   - `func NewClient(apiClient *api.Client) *Client`.
   - Scope resolution: most boundaries have `func (client *Client) scopes() []string`
     returning the boundary's OAuth scope — from config (`bapi`, `ppapi`,
-    `powerapps`, `advisor`, `analytics`) or a fixed constant (`athena`,
+    `powerapps`, `advisor`, `analytics`) or a fixed constant (`admin`,
     `copilot`). `dataverse` instead has a package-level
     `scopes(environmentHost string) []string` returning
     `{"https://" + environmentHost + "/.default"}`.

@@ -12,7 +12,7 @@ eventually be published — as a standalone Go client module.
 | `ppapi` | Power Platform API | `api.powerplatform.com` |
 | `dataverse` | Dataverse Web API (per-environment OData v4) | `{org}.crm.dynamics.com` |
 | `powerapps` | PowerApps API | `api.powerapps.com` |
-| `athena` | Power Platform admin center API ("Athena") | `api.admin.powerplatform.microsoft.com` |
+| `admin` | Power Platform admin center API | `api.admin.powerplatform.microsoft.com` |
 | `analytics` | Power Platform admin analytics (CS Analytics) API | regional `*.csanalytics.powerplatform.microsoft.com` |
 | `advisor` | PowerApps Advisor API (solution checker) | per-environment runtime endpoint |
 | `copilot` | Copilot Studio API | per-environment runtime endpoint |
@@ -28,3 +28,8 @@ Rules:
   policy via PPAPI) belong to the service layer in `internal/services`.
 - Wire DTOs live next to the operations that produce/consume them and are
   exported. Terraform models and DTO↔model conversion stay in the services.
+
+Note: the name `athena` is reserved — internally it is the Synapse Link /
+"Link to Fabric" orchestration service (`athenawebservice.e{clusterSuffix}.powerapps.com`,
+own token resource), which is not yet part of this provider; it becomes its own
+client package when the fabric-link feature lands.

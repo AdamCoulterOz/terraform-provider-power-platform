@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package athena
+package admin
 
 import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
