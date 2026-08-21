@@ -131,20 +131,6 @@ type validateSolutionImportResultDto struct {
 	ErrorMessages []any  `json:"ErrorMessages"`
 }
 
-type connectionArrayDto struct {
-	Value []connectionDto `json:"value"`
-}
-
-type connectionDto struct {
-	Name       string                  `json:"name"`
-	Properties connectionPropertiesDto `json:"properties"`
-}
-
-type connectionPropertiesDto struct {
-	ApiId       string `json:"apiId"`
-	DisplayName string `json:"displayName"`
-}
-
 type environmentVariableDefinitionsResponseDto struct {
 	Value []environmentVariableDefinitionDto `json:"value"`
 }

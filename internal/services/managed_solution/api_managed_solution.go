@@ -23,21 +23,21 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
-	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/solution"
 )
 
 func NewManagedSolutionClient(apiClient *api.Client) Client {
 	return Client{
-		Api:            apiClient,
+		Client:         ppapi.NewClient(apiClient),
 		SolutionClient: solution.NewSolutionClient(apiClient),
 	}
 }
 
 type Client struct {
-	Api            *api.Client
+	*ppapi.Client
 	SolutionClient solution.Client
 }
 
@@ -254,25 +254,6 @@ func (client *Client) validateSolutionImportResult(ctx context.Context, environm
 		return fmt.Errorf("solution import failed: %s", strings.Join(messages, "; "))
 	}
 	return nil
-}
-
-func (client *Client) getConnections(ctx context.Context, environmentId string) ([]connectionDto, error) {
-	apiURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   helpers.BuildEnvironmentHostUri(environmentId, client.Api.GetConfig().Urls.PowerPlatformUrl),
-		Path:   "/connectivity/connections",
-	}
-	values := url.Values{}
-	values.Add("api-version", "1")
-	apiURL.RawQuery = values.Encode()
-
-	connections := connectionArrayDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiURL.String(), nil, nil, []int{http.StatusOK}, &connections)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get connections: %w", err)
-	}
-
-	return connections.Value, nil
 }
 
 func (client *Client) GetUnmanagedEnvironmentVariableDefinitions(ctx context.Context, environmentId string, schemaNames []string) (map[string]bool, error) {
@@ -583,8 +564,8 @@ func normalizeVersionParts(raw string) ([]int, error) {
 	return normalized, nil
 }
 
-func buildConnectionParameters(packageRefs map[string]packageConnectionReference, configuredRefs map[string]string, connections []connectionDto) ([]any, error) {
-	connectionIndex := make(map[string]connectionDto, len(connections))
+func buildConnectionParameters(packageRefs map[string]packageConnectionReference, configuredRefs map[string]string, connections []ppapi.ConnectionDto) ([]any, error) {
+	connectionIndex := make(map[string]ppapi.ConnectionDto, len(connections))
 	for _, conn := range connections {
 		connectionIndex[conn.Name] = conn
 	}

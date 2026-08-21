@@ -501,7 +501,7 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 		return nil
 	}
 
-	connections, err := r.Client.getConnections(ctx, plan.EnvironmentId.ValueString())
+	connections, err := r.Client.GetConnections(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		diagnostics.AddError("Unable to resolve connection references", err.Error())
 		return nil
