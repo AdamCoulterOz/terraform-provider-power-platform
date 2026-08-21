@@ -6,6 +6,7 @@ package powerapps
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/powerapps"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -26,7 +27,7 @@ type EnvironmentPowerAppsDataSourceModel struct {
 	CreatedTime   types.String `tfsdk:"created_time"`
 }
 
-func ConvertFromPowerAppDto(powerAppDto powerAppBapiDto) EnvironmentPowerAppsDataSourceModel {
+func ConvertFromPowerAppDto(powerAppDto powerapps.PowerAppBapiDto) EnvironmentPowerAppsDataSourceModel {
 	return EnvironmentPowerAppsDataSourceModel{
 		EnvironmentId: types.StringValue(powerAppDto.Properties.Environment.Name),
 		DisplayName:   types.StringValue(powerAppDto.Properties.DisplayName),

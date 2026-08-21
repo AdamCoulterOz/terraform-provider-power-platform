@@ -5,49 +5,39 @@ package powerapps
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/powerapps"
 )
 
 func newPowerAppssClient(apiClient *api.Client) client {
 	return client{
-		Api:               apiClient,
+		Client:            powerapps.NewClient(apiClient),
 		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
-	Api               *api.Client
+	*powerapps.Client
 	environmentClient *bapi.Client
 }
 
-func (client *client) GetPowerApps(ctx context.Context) ([]powerAppBapiDto, error) {
+// GetPowerApps lists the Power Apps of every environment in the tenant. The
+// environment list comes from BAPI and the apps of each environment from the
+// PowerApps API, so the composition lives here in the service.
+func (client *client) GetPowerApps(ctx context.Context) ([]powerapps.PowerAppBapiDto, error) {
 	envs, err := client.environmentClient.GetEnvironments(ctx)
 	if err != nil {
 		return nil, err
 	}
-	apps := make([]powerAppBapiDto, 0)
+	apps := make([]powerapps.PowerAppBapiDto, 0)
 	for _, env := range envs {
-		apiUrl := &url.URL{
-			Scheme: constants.HTTPS,
-			Host:   client.Api.GetConfig().Urls.PowerAppsUrl,
-			Path:   fmt.Sprintf("/providers/Microsoft.PowerApps/scopes/admin/environments/%s/apps", env.Name),
-		}
-		values := url.Values{}
-		values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
-		apiUrl.RawQuery = values.Encode()
-
-		appsArray := powerAppArrayDto{}
-		_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &appsArray)
+		envApps, err := client.GetEnvironmentPowerApps(ctx, env.Name)
 		if err != nil {
 			return nil, err
 		}
-		apps = append(apps, appsArray.Value...)
+		apps = append(apps, envApps...)
 	}
 	return apps, nil
 }
