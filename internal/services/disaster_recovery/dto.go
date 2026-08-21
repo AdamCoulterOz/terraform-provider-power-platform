@@ -3,7 +3,7 @@
 
 package disaster_recovery
 
-import "github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
+import "github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 
 type disasterRecoveryPatchDto struct {
 	Properties disasterRecoveryPatchPropertiesDto `json:"properties"`
@@ -14,5 +14,5 @@ type disasterRecoveryPatchPropertiesDto struct {
 }
 
 type disasterRecoveryPatchStatesDto struct {
-	DisasterRecovery environment.DisasterRecoveryStateDto `json:"disasterRecovery"`
+	DisasterRecovery bapi.DisasterRecoveryStateDto `json:"disasterRecovery"`
 }

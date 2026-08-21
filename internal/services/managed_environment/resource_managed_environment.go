@@ -23,10 +23,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 var _ resource.Resource = &ManagedEnvironmentResource{}
@@ -399,11 +399,11 @@ func (r *ManagedEnvironmentResource) validateAndPrepareSolutionCheckerRules(ctx 
 }
 
 // buildManagedEnvironmentDto creates the GovernanceConfigurationDto from the plan.
-func (r *ManagedEnvironmentResource) buildManagedEnvironmentDto(plan *ManagedEnvironmentResourceModel, solutionCheckerRuleOverrides *string) environment.GovernanceConfigurationDto {
-	managedEnvironmentDto := environment.GovernanceConfigurationDto{
+func (r *ManagedEnvironmentResource) buildManagedEnvironmentDto(plan *ManagedEnvironmentResourceModel, solutionCheckerRuleOverrides *string) bapi.GovernanceConfigurationDto {
+	managedEnvironmentDto := bapi.GovernanceConfigurationDto{
 		ProtectionLevel: constants.PROTECTION_LEVEL_STANDARD,
-		Settings: &environment.SettingsDto{
-			ExtendedSettings: environment.ExtendedSettingsDto{
+		Settings: &bapi.SettingsDto{
+			ExtendedSettings: bapi.ExtendedSettingsDto{
 				ExcludeEnvironmentFromAnalysis: strconv.FormatBool(plan.IsUsageInsightsDisabled.ValueBool()),
 				IsGroupSharingDisabled:         strconv.FormatBool(plan.IsGroupSharingDisabled.ValueBool()),
 				MaxLimitUserSharing:            strconv.FormatInt(plan.MaxLimitUserSharing.ValueInt64(), 10),
@@ -449,7 +449,7 @@ func (r *ManagedEnvironmentResource) buildManagedEnvironmentDto(plan *ManagedEnv
 	return managedEnvironmentDto
 }
 
-func (r *ManagedEnvironmentResource) populateStateFromEnvironment(ctx context.Context, plan *ManagedEnvironmentResourceModel, env *environment.EnvironmentDto, diagnostics *diag.Diagnostics) {
+func (r *ManagedEnvironmentResource) populateStateFromEnvironment(ctx context.Context, plan *ManagedEnvironmentResourceModel, env *bapi.EnvironmentDto, diagnostics *diag.Diagnostics) {
 	if env.Properties.LinkedEnvironmentMetadata == nil {
 		diagnostics.AddError(
 			fmt.Sprintf("Error populating state from environment for %s", r.FullTypeName()),

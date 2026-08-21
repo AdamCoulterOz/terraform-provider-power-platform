@@ -10,19 +10,19 @@ import (
 	"net/url"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 type Client struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
 func NewSolutionCheckerRulesClient(apiClient *api.Client) *Client {
 	return &Client{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 

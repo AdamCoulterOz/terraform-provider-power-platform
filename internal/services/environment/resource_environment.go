@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/config"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
@@ -443,13 +444,13 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	// If it's dataverse environment, validate the currency and language code
 	if envToCreate.Properties.LinkedEnvironmentMetadata != nil {
-		err = languageCodeValidator(ctx, r.EnvironmentClient.Api, envToCreate.Location, fmt.Sprintf("%d", envToCreate.Properties.LinkedEnvironmentMetadata.BaseLanguage))
+		err = r.EnvironmentClient.ValidateLanguageCode(ctx, envToCreate.Location, fmt.Sprintf("%d", envToCreate.Properties.LinkedEnvironmentMetadata.BaseLanguage))
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("Language code validation failed for %s", r.FullTypeName()), err.Error())
 			return
 		}
 
-		err = currencyCodeValidator(ctx, r.EnvironmentClient.Api, envToCreate.Location, envToCreate.Properties.LinkedEnvironmentMetadata.Currency.Code)
+		err = r.EnvironmentClient.ValidateCurrencyCode(ctx, envToCreate.Location, envToCreate.Properties.LinkedEnvironmentMetadata.Currency.Code)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("Currency code validation failed for %s", r.FullTypeName()), err.Error())
 			return
@@ -472,7 +473,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	// error after creation leaves an environment that Terraform never recorded: it keeps its domain
 	// name, so the next apply fails with DomainNameAlreadyInUse and it can only be removed by hand.
 	var currencyCode string
-	var templateMetadata *createTemplateMetadataDto
+	var templateMetadata *bapi.CreateTemplateMetadataDto
 	var templates []string
 	if envToCreate.Properties.LinkedEnvironmentMetadata != nil {
 		currencyCode = envToCreate.Properties.LinkedEnvironmentMetadata.Currency.Code
@@ -504,7 +505,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		}
 
 		if helpers.IsKnown(plan.Dataverse) {
-			envDto, err = r.EnvironmentClient.waitForDataverseMetadata(ctx, envDto.Name, envDto)
+			envDto, err = r.EnvironmentClient.WaitForDataverseMetadata(ctx, envDto.Name, envDto)
 			if err != nil {
 				resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading %s", r.FullTypeName()), err.Error())
 				return
@@ -582,7 +583,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		currencyCode = defaultCurrency.IsoCurrencyCode
 	}
 
-	var templateMetadata *createTemplateMetadataDto
+	var templateMetadata *bapi.CreateTemplateMetadataDto
 	var templates []string
 	if !state.Dataverse.IsNull() && !state.Dataverse.IsUnknown() {
 		dv, err := convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(ctx, state.Dataverse)
@@ -627,14 +628,14 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	envProp := EnviromentPropertiesDto{
+	envProp := bapi.EnviromentPropertiesDto{
 		DisplayName:     plan.DisplayName.ValueString(),
 		EnvironmentSku:  plan.EnvironmentType.ValueString(),
 		BingChatEnabled: plan.AllowBingSearch.ValueBool(),
 		M365Enabled:     plan.AllowMicrosoft365Services.ValueBool(),
 	}
 
-	environmentDto := EnvironmentDto{
+	environmentDto := bapi.EnvironmentDto{
 		Properties: &envProp,
 	}
 
@@ -700,14 +701,14 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	if helpers.IsKnown(plan.Dataverse) {
-		envDto, err = r.EnvironmentClient.waitForDataverseMetadata(ctx, plan.Id.ValueString(), envDto)
+		envDto, err = r.EnvironmentClient.WaitForDataverseMetadata(ctx, plan.Id.ValueString(), envDto)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading %s", r.FullTypeName()), err.Error())
 			return
 		}
 	}
 
-	var templateMetadata *createTemplateMetadataDto
+	var templateMetadata *bapi.CreateTemplateMetadataDto
 	var templates []string
 	if !state.Dataverse.IsNull() && !state.Dataverse.IsUnknown() {
 		dv, err := convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(ctx, state.Dataverse)
@@ -731,9 +732,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 }
 
 // Attributes the practitioner did not configure stay out of the payload so the service keeps their current value.
-func (r *Resource) updateEnvironmentAiFeatures(ctx context.Context, environmentId string, plan *SourceModel) (*EnvironmentDto, error) {
-	featuresDto := GenerativeAiFeaturesDto{
-		Properties: GenerativeAiFeaturesPropertiesDto{
+func (r *Resource) updateEnvironmentAiFeatures(ctx context.Context, environmentId string, plan *SourceModel) (*bapi.EnvironmentDto, error) {
+	featuresDto := bapi.GenerativeAiFeaturesDto{
+		Properties: bapi.GenerativeAiFeaturesPropertiesDto{
 			BingChatEnabled: helpers.BoolPointer(plan.AllowBingSearch),
 			M365Enabled:     helpers.BoolPointer(plan.AllowMicrosoft365Services),
 		},
@@ -745,7 +746,7 @@ func (r *Resource) updateEnvironmentAiFeatures(ctx context.Context, environmentI
 	// crossBoundaryCopilotDataMovementEnabled at all is rejected outside the EU data boundary
 	// ("can only be set for environments within an EU data boundary location"), so an unset
 	// attribute would otherwise fail every environment creation outside the EU.
-	copilotPolicies := CopilotPoliciesDto{}
+	copilotPolicies := bapi.CopilotPoliciesDto{}
 	if !plan.AllowMovingDataAcrossRegions.IsNull() && !plan.AllowMovingDataAcrossRegions.IsUnknown() {
 		copilotPolicies.CrossGeoCopilotDataMovementEnabled = plan.AllowMovingDataAcrossRegions.ValueBoolPointer()
 	}
@@ -772,11 +773,11 @@ func addDataverse(ctx context.Context, plan *SourceModel, r *Resource) (string, 
 	return linkedMetadataDto.Currency.Code, nil
 }
 
-func updateExistingDataverse(ctx context.Context, plan *SourceModel, environmentDto *EnvironmentDto, state *SourceModel) string {
+func updateExistingDataverse(ctx context.Context, plan *SourceModel, environmentDto *bapi.EnvironmentDto, state *SourceModel) string {
 	var dataverseSourcePlanModel DataverseSourceModel
 	plan.Dataverse.As(ctx, &dataverseSourcePlanModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 
-	environmentDto.Properties.LinkedEnvironmentMetadata = &LinkedEnvironmentMetadataDto{
+	environmentDto.Properties.LinkedEnvironmentMetadata = &bapi.LinkedEnvironmentMetadataDto{
 		DomainName: dataverseSourcePlanModel.Domain.ValueString(),
 	}
 
@@ -784,14 +785,14 @@ func updateExistingDataverse(ctx context.Context, plan *SourceModel, environment
 
 	if !dataverseSourcePlanModel.AdministrationMode.IsNull() && !dataverseSourcePlanModel.AdministrationMode.IsUnknown() {
 		if dataverseSourcePlanModel.AdministrationMode.ValueBool() {
-			environmentDto.Properties.States = &StatesEnvironmentDto{
-				Runtime: &RuntimeEnvironmentDto{
+			environmentDto.Properties.States = &bapi.StatesEnvironmentDto{
+				Runtime: &bapi.RuntimeEnvironmentDto{
 					Id: "AdminMode",
 				},
 			}
 		} else {
-			environmentDto.Properties.States = &StatesEnvironmentDto{
-				Runtime: &RuntimeEnvironmentDto{
+			environmentDto.Properties.States = &bapi.StatesEnvironmentDto{
+				Runtime: &bapi.RuntimeEnvironmentDto{
 					Id: "Enabled",
 				},
 			}
@@ -814,7 +815,7 @@ func updateExistingDataverse(ctx context.Context, plan *SourceModel, environment
 	}
 
 	if !dataverseSourcePlanModel.LinkedAppId.IsNull() && dataverseSourcePlanModel.LinkedAppId.ValueString() != "" {
-		environmentDto.Properties.LinkedAppMetadata = &LinkedAppMetadataDto{
+		environmentDto.Properties.LinkedAppMetadata = &bapi.LinkedAppMetadataDto{
 			Type: dataverseSourcePlanModel.LinkedAppType.ValueString(),
 			Id:   dataverseSourcePlanModel.LinkedAppId.ValueString(),
 			Url:  dataverseSourcePlanModel.LinkedAppURL.ValueString(),
@@ -872,45 +873,45 @@ func (r *Resource) updateEnvironmentType(ctx context.Context, plan *SourceModel,
 	return nil
 }
 
-func updateDescription(plan *SourceModel, environmentDto *EnvironmentDto) {
+func updateDescription(plan *SourceModel, environmentDto *bapi.EnvironmentDto) {
 	if !plan.Description.IsNull() && plan.Description.ValueString() != "" {
 		environmentDto.Properties.Description = plan.Description.ValueString()
 	}
 }
 
-func updateCadence(plan *SourceModel, environmentDto *EnvironmentDto) {
+func updateCadence(plan *SourceModel, environmentDto *bapi.EnvironmentDto) {
 	if !plan.Cadence.IsNull() && plan.Cadence.ValueString() != "" {
-		environmentDto.Properties.UpdateCadence = &UpdateCadenceDto{
+		environmentDto.Properties.UpdateCadence = &bapi.UpdateCadenceDto{
 			Id: plan.Cadence.ValueString(),
 		}
 	}
 }
 
 // Returns nil when the environment does not manage any generative AI attribute, leaving the caller to read it.
-func (r *Resource) updateGenerativeAiFeatures(ctx context.Context, plan *SourceModel) (*EnvironmentDto, error) {
+func (r *Resource) updateGenerativeAiFeatures(ctx context.Context, plan *SourceModel) (*bapi.EnvironmentDto, error) {
 	if helpers.IsKnown(plan.AllowBingSearch) || helpers.IsKnown(plan.AllowMicrosoft365Services) || helpers.IsKnown(plan.AllowMovingDataAcrossRegions) || helpers.IsKnown(plan.AllowFlexRouting) {
 		return r.updateEnvironmentAiFeatures(ctx, plan.Id.ValueString(), plan)
 	}
 	return nil, nil
 }
 
-func updateEnvironmentGroupId(plan *SourceModel, environmentDto *EnvironmentDto) {
+func updateEnvironmentGroupId(plan *SourceModel, environmentDto *bapi.EnvironmentDto) {
 	if !plan.EnvironmentGroupId.IsNull() {
-		environmentDto.Properties.ParentEnvironmentGroup = &ParentEnvironmentGroupDto{
+		environmentDto.Properties.ParentEnvironmentGroup = &bapi.ParentEnvironmentGroupDto{
 			Id: plan.EnvironmentGroupId.ValueString(),
 		}
 	}
 }
 
-func updateBillingPolicyId(plan *SourceModel, environmentDto *EnvironmentDto) {
+func updateBillingPolicyId(plan *SourceModel, environmentDto *bapi.EnvironmentDto) {
 	if !plan.BillingPolicyId.IsNull() {
-		environmentDto.Properties.BillingPolicy = &BillingPolicyDto{
+		environmentDto.Properties.BillingPolicy = &bapi.BillingPolicyDto{
 			Id: plan.BillingPolicyId.ValueString(),
 		}
 	}
 }
 
-func (r *Resource) updateDataverse(ctx context.Context, plan *SourceModel, state *SourceModel, environmentDto *EnvironmentDto) (string, error) {
+func (r *Resource) updateDataverse(ctx context.Context, plan *SourceModel, state *SourceModel, environmentDto *bapi.EnvironmentDto) (string, error) {
 	var currencyCode string
 	if !isDataverseEnvironmentEmpty(ctx, state) && !isDataverseEnvironmentEmpty(ctx, plan) {
 		currencyCode = updateExistingDataverse(ctx, plan, environmentDto, state)

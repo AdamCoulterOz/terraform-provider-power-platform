@@ -6,8 +6,8 @@ package connection
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 type SharesDataSource struct {
@@ -57,7 +57,7 @@ type ConnectionsDataSourceModel struct {
 type ShareResource struct {
 	helpers.TypeInfo
 	ConnectionsClient client
-	EnvironmentClient environment.Client
+	EnvironmentClient *bapi.Client
 }
 
 type ShareResourceModel struct {
@@ -78,7 +78,7 @@ type SharePrincipalResourceModel struct {
 type Resource struct {
 	helpers.TypeInfo
 	ConnectionsClient client
-	EnvironmentClient environment.Client
+	EnvironmentClient *bapi.Client
 }
 
 type ResourceModel struct {

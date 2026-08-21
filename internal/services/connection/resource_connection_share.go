@@ -19,9 +19,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 var _ resource.Resource = &ShareResource{}
@@ -137,7 +137,7 @@ func (r *ShareResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 	r.ConnectionsClient = newConnectionsClient(client.Api)
-	r.EnvironmentClient = environment.NewEnvironmentClient(client.Api)
+	r.EnvironmentClient = bapi.NewClient(client.Api)
 }
 
 func (r *ShareResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

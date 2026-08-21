@@ -11,20 +11,20 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 type environmentWaveClient struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
 func newEnvironmentWaveClient(apiClient *api.Client) *environmentWaveClient {
 	return &environmentWaveClient{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 

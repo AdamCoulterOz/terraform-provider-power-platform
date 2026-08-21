@@ -24,9 +24,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 const nullDynamicValue = "<null>"
@@ -128,7 +128,7 @@ func (r *DataRecordResource) Configure(ctx context.Context, req resource.Configu
 		return
 	}
 	r.DataRecordClient = newDataRecordClient(providerClient.Api)
-	r.EnvironmentClient = environment.NewEnvironmentClient(providerClient.Api)
+	r.EnvironmentClient = bapi.NewClient(providerClient.Api)
 }
 
 func (r *DataRecordResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

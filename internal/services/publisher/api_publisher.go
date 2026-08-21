@@ -11,21 +11,21 @@ import (
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 type client struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
 func newPublisherClient(apiClient *api.Client) client {
 	return client{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 

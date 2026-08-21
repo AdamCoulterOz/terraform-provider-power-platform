@@ -12,27 +12,27 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func newManagedEnvironmentClient(apiClient *api.Client) client {
 	return client{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
-func (client *client) EnableManagedEnvironment(ctx context.Context, managedEnvSettings environment.GovernanceConfigurationDto, environmentId string) error {
+func (client *client) EnableManagedEnvironment(ctx context.Context, managedEnvSettings bapi.GovernanceConfigurationDto, environmentId string) error {
 	return client.enableManagedEnvironmentWithRetry(ctx, managedEnvSettings, environmentId, 0)
 }
 
-func (client *client) enableManagedEnvironmentWithRetry(ctx context.Context, managedEnvSettings environment.GovernanceConfigurationDto, environmentId string, retryCount int) error {
+func (client *client) enableManagedEnvironmentWithRetry(ctx context.Context, managedEnvSettings bapi.GovernanceConfigurationDto, environmentId string, retryCount int) error {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
 		Host:   client.Api.GetConfig().Urls.BapiUrl,
@@ -109,7 +109,7 @@ func (client *client) disableManagedEnvironmentWithRetry(ctx context.Context, en
 	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
-	managedEnv := environment.GovernanceConfigurationDto{
+	managedEnv := bapi.GovernanceConfigurationDto{
 		ProtectionLevel: "Basic",
 	}
 
@@ -143,7 +143,7 @@ type SolutionCheckerRule struct {
 }
 
 func (client *client) FetchSolutionCheckerRules(ctx context.Context, environmentId string) ([]string, error) {
-	if client.environmentClient == (environment.Client{}) {
+	if client.environmentClient == nil {
 		return nil, errors.New("environmentClient is not initialized")
 	}
 

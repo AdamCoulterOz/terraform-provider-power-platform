@@ -18,9 +18,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func NewEnvironmentApplicationAdminResource() resource.Resource {
@@ -35,7 +35,7 @@ func NewEnvironmentApplicationAdminResource() resource.Resource {
 type EnvironmentApplicationAdminResource struct {
 	helpers.TypeInfo
 	ApplicationClient client
-	EnvironmentClient environment.Client
+	EnvironmentClient *bapi.Client
 }
 
 // EnvironmentApplicationAdminResourceModel describes the resource data model.
@@ -112,7 +112,7 @@ func (r *EnvironmentApplicationAdminResource) Configure(ctx context.Context, req
 		return
 	}
 	r.ApplicationClient = newApplicationClient(client.Api)
-	r.EnvironmentClient = environment.NewEnvironmentClient(client.Api)
+	r.EnvironmentClient = bapi.NewClient(client.Api)
 }
 
 func (r *EnvironmentApplicationAdminResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

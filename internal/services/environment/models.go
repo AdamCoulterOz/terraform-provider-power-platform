@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/config"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
@@ -90,11 +91,11 @@ func isDataverseEnvironmentEmpty(ctx context.Context, environment *SourceModel) 
 	return dataverseSourceModel.CurrencyCode.IsNull() || dataverseSourceModel.CurrencyCode.ValueString() == ""
 }
 
-func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environmentSource *SourceModel, r *Resource) (*environmentCreateDto, error) {
+func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environmentSource *SourceModel, r *Resource) (*bapi.EnvironmentCreateDto, error) {
 	conf := r.EnvironmentClient.Api.Config
-	environmentDto := &environmentCreateDto{
+	environmentDto := &bapi.EnvironmentCreateDto{
 		Location: environmentSource.Location.ValueString(),
-		Properties: environmentCreatePropertiesDto{
+		Properties: bapi.EnvironmentCreatePropertiesDto{
 			DisplayName:    environmentSource.DisplayName.ValueString(),
 			EnvironmentSku: environmentSource.EnvironmentType.ValueString(),
 		},
@@ -105,7 +106,7 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	}
 
 	if !environmentSource.Cadence.IsNull() && environmentSource.Cadence.ValueString() != "" {
-		environmentDto.Properties.UpdateCadence = &UpdateCadenceDto{
+		environmentDto.Properties.UpdateCadence = &bapi.UpdateCadenceDto{
 			Id: environmentSource.Cadence.ValueString(),
 		}
 	}
@@ -115,7 +116,7 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	}
 
 	if !environmentSource.BillingPolicyId.IsNull() && environmentSource.BillingPolicyId.ValueString() != constants.ZERO_UUID {
-		environmentDto.Properties.BillingPolicy = BillingPolicyDto{
+		environmentDto.Properties.BillingPolicy = bapi.BillingPolicyDto{
 			Id: environmentSource.BillingPolicyId.ValueString(),
 		}
 	}
@@ -123,7 +124,7 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	if environmentSource.ReleaseCycle.ValueString() == ReleaseCycleTypesEarly {
 		value := conf.GetCurrentCloudConfiguration(config.FirstReleaseClusterName)
 		if value != nil {
-			environmentDto.Properties.Cluster = &ClusterDto{
+			environmentDto.Properties.Cluster = &bapi.ClusterDto{
 				Catergory: *value,
 			}
 		}
@@ -135,7 +136,7 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	// every attempt is refused with GovernanceConfigurationChangeBlockedByGroup, so creating an
 	// environment and a powerplatform_managed_environment together always fails.
 	if helpers.IsKnown(environmentSource.EnvironmentGroupId) && environmentSource.EnvironmentGroupId.ValueString() != constants.ZERO_UUID {
-		environmentDto.Properties.ParentEnvironmentGroup = &ParentEnvironmentGroupDto{Id: environmentSource.EnvironmentGroupId.ValueString()}
+		environmentDto.Properties.ParentEnvironmentGroup = &bapi.ParentEnvironmentGroupDto{Id: environmentSource.EnvironmentGroupId.ValueString()}
 	}
 
 	if helpers.IsKnown(environmentSource.AllowBingSearch) {
@@ -147,11 +148,11 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	}
 
 	if helpers.IsKnown(environmentSource.OwnerId) {
-		tenantId, err := r.EnvironmentClient.tenantClient.GetTenant(ctx)
+		tenantId, err := r.EnvironmentClient.GetTenant(ctx)
 		if err != nil {
 			return nil, err
 		}
-		environmentDto.Properties.UsedBy = &UsedByDto{
+		environmentDto.Properties.UsedBy = &bapi.UsedByDto{
 			Id:       environmentSource.OwnerId.ValueString(),
 			Type:     "1",
 			TenantId: tenantId.TenantId,
@@ -172,12 +173,12 @@ func convertCreateEnvironmentDtoFromSourceModel(ctx context.Context, environment
 	return environmentDto, nil
 }
 
-func convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(ctx context.Context, dataverse types.Object) (*createLinkEnvironmentMetadataDto, error) {
+func convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(ctx context.Context, dataverse types.Object) (*bapi.CreateLinkEnvironmentMetadataDto, error) {
 	if helpers.IsKnown(dataverse) {
 		var dataverseSourceModel DataverseSourceModel
 		dataverse.As(ctx, &dataverseSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 
-		var templateMetadataObject *createTemplateMetadataDto
+		var templateMetadataObject *bapi.CreateTemplateMetadataDto
 		if dataverseSourceModel.TemplateMetadata.ValueString() != "" {
 			err := json.Unmarshal([]byte(dataverseSourceModel.TemplateMetadata.ValueString()), &templateMetadataObject)
 			if err != nil {
@@ -188,10 +189,10 @@ func convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(
 			}
 		}
 
-		linkedEnvironmentMetadata := &createLinkEnvironmentMetadataDto{
+		linkedEnvironmentMetadata := &bapi.CreateLinkEnvironmentMetadataDto{
 			BaseLanguage:    int(dataverseSourceModel.LanguageName.ValueInt64()),
 			SecurityGroupId: dataverseSourceModel.SecurityGroupId.ValueString(),
-			Currency: &createCurrencyDto{
+			Currency: &bapi.CreateCurrencyDto{
 				Code: dataverseSourceModel.CurrencyCode.ValueString(),
 			},
 			Templates:        dataverseSourceModel.Templates,
@@ -209,7 +210,7 @@ func convertEnvironmentCreateLinkEnvironmentMetadataDtoFromDataverseSourceModel(
 	return nil, errors.New("dataverse object is null or unknown")
 }
 
-func convertSourceModelFromEnvironmentDto(environmentDto EnvironmentDto, currencyCode, ownerId *string, templateMetadata *createTemplateMetadataDto, templates []string, timeout timeouts.Value, providerConfig config.ProviderConfig) (*SourceModel, error) {
+func convertSourceModelFromEnvironmentDto(environmentDto bapi.EnvironmentDto, currencyCode, ownerId *string, templateMetadata *bapi.CreateTemplateMetadataDto, templates []string, timeout timeouts.Value, providerConfig config.ProviderConfig) (*SourceModel, error) {
 	model := &SourceModel{
 		Timeouts:                  timeout,
 		Description:               types.StringValue(environmentDto.Properties.Description),
@@ -342,7 +343,7 @@ func convertSourceModelFromEnvironmentDto(environmentDto EnvironmentDto, currenc
 	return model, nil
 }
 
-func convertEnvironmentGroupFromDto(environmentDto EnvironmentDto, model *SourceModel) {
+func convertEnvironmentGroupFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel) {
 	if environmentDto.Properties.ParentEnvironmentGroup != nil {
 		model.EnvironmentGroupId = types.StringValue(environmentDto.Properties.ParentEnvironmentGroup.Id)
 	} else {
@@ -350,7 +351,7 @@ func convertEnvironmentGroupFromDto(environmentDto EnvironmentDto, model *Source
 	}
 }
 
-func convertBillingPolicyModelFromDto(environmentDto EnvironmentDto, model *SourceModel) {
+func convertBillingPolicyModelFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel) {
 	if environmentDto.Properties.BillingPolicy != nil && environmentDto.Properties.BillingPolicy.Id != "" {
 		model.BillingPolicyId = types.StringValue(environmentDto.Properties.BillingPolicy.Id)
 	} else {
@@ -358,7 +359,7 @@ func convertBillingPolicyModelFromDto(environmentDto EnvironmentDto, model *Sour
 	}
 }
 
-func convertReleaseCycleModelFromDto(environmentDto EnvironmentDto, model *SourceModel, providerConfig config.ProviderConfig) {
+func convertReleaseCycleModelFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel, providerConfig config.ProviderConfig) {
 	value := providerConfig.GetCurrentCloudConfiguration(config.FirstReleaseClusterName)
 	if environmentDto.Properties.Cluster != nil && value != nil && environmentDto.Properties.Cluster.Catergory == *value {
 		model.ReleaseCycle = types.StringValue(ReleaseCycleTypesEarly)
@@ -367,7 +368,7 @@ func convertReleaseCycleModelFromDto(environmentDto EnvironmentDto, model *Sourc
 	}
 }
 
-func convertOwnerIdFromDto(environmentDto EnvironmentDto, model *SourceModel) {
+func convertOwnerIdFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel) {
 	if environmentDto.Properties.UsedBy != nil {
 		model.OwnerId = types.StringValue(environmentDto.Properties.UsedBy.Id)
 	} else {
@@ -375,13 +376,13 @@ func convertOwnerIdFromDto(environmentDto EnvironmentDto, model *SourceModel) {
 	}
 }
 
-func convertCopilotPoliciesFromDto(environmentDto EnvironmentDto, model *SourceModel) {
+func convertCopilotPoliciesFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel) {
 	policies := environmentDto.Properties.CopilotPolicies
 	model.AllowMovingDataAcrossRegions = types.BoolValue(policies != nil && policies.CrossGeoCopilotDataMovementEnabled != nil && *policies.CrossGeoCopilotDataMovementEnabled)
 	model.AllowFlexRouting = types.BoolValue(policies != nil && policies.CrossBoundaryCopilotDataMovementEnabled != nil && *policies.CrossBoundaryCopilotDataMovementEnabled)
 }
 
-func convertEnterprisePolicyModelFromDto(environmentDto EnvironmentDto, model *SourceModel) {
+func convertEnterprisePolicyModelFromDto(environmentDto bapi.EnvironmentDto, model *SourceModel) {
 	enterprisePolicyAttrType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"type":      types.StringType,

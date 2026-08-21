@@ -1,0 +1,775 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+package bapi
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
+	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
+)
+
+func findLocation(locations LocationArrayDto, locationToFind string) (*LocationDto, error) {
+	for _, loc := range locations.Value {
+		if loc.Name == locationToFind {
+			return &loc, nil
+		}
+	}
+
+	locationNames := make([]string, len(locations.Value))
+	for i, loc := range locations.Value {
+		locationNames[i] = loc.Name
+	}
+	return nil, fmt.Errorf("location '%s' is not valid. valid locations are: %s", locationToFind, strings.Join(locationNames, ", "))
+}
+
+func findAzureRegion(location *LocationDto, azureRegion string) (bool, error) {
+	for _, region := range location.Properties.AzureRegions {
+		if region == azureRegion {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("region '%s' is not valid for location %s. valid regions are: %s", azureRegion, location.Name, strings.Join(location.Properties.AzureRegions, ", "))
+}
+
+// LocationValidator checks that a location (and optionally one of its Azure
+// regions) exists for the tenant.
+func (client *Client) LocationValidator(ctx context.Context, location, azureRegion string) error {
+	locationsArray, err := client.GetLocations(ctx)
+	if err != nil {
+		return err
+	}
+
+	foundLocation, err := findLocation(*locationsArray, location)
+	if err != nil {
+		return err
+	}
+
+	if azureRegion == "" {
+		return nil
+	}
+
+	isRegionFound, err := findAzureRegion(foundLocation, azureRegion)
+	if err != nil || !isRegionFound {
+		return err
+	}
+
+	return nil
+}
+
+// ValidateCurrencyCode checks that a currency code is available in a location.
+func (client *Client) ValidateCurrencyCode(ctx context.Context, location, currencyCode string) error {
+	currencies, err := client.GetCurrenciesByLocation(ctx, location)
+	if err != nil {
+		return err
+	}
+
+	codes := make([]string, len(currencies.Value))
+	for i, item := range currencies.Value {
+		codes[i] = item.Name
+	}
+
+	found := func(items []string, check string) bool {
+		for _, item := range items {
+			if item == check {
+				return true
+			}
+		}
+		return false
+	}(codes, currencyCode)
+
+	if !found {
+		return fmt.Errorf("currency Code %s is not valid. valid currency codes are: %s", currencyCode, strings.Join(codes, ", "))
+	}
+
+	return nil
+}
+
+// ValidateLanguageCode checks that a language code is available in a location.
+func (client *Client) ValidateLanguageCode(ctx context.Context, location, languageCode string) error {
+	languages, err := client.GetLanguagesByLocation(ctx, location)
+	if err != nil {
+		return err
+	}
+
+	codes := make([]string, len(languages.Value))
+	for i, item := range languages.Value {
+		codes[i] = item.Name
+	}
+
+	found := func(items []string, check string) bool {
+		for _, item := range items {
+			if item == check {
+				return true
+			}
+		}
+		return false
+	}(codes, languageCode)
+
+	if !found {
+		return fmt.Errorf("language Code %s is not valid. valid language codes are: %s", languageCode, strings.Join(codes, ", "))
+	}
+
+	return nil
+}
+
+// GetEnvironmentHostById resolves the Dataverse host of an environment.
+func (client *Client) GetEnvironmentHostById(ctx context.Context, environmentId string) (string, error) {
+	env, err := client.GetEnvironment(ctx, environmentId)
+	if err != nil {
+		return "", err
+	}
+	if env.Properties.LinkedEnvironmentMetadata == nil {
+		return "", customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_URL_NOT_FOUND), "environment url not found, please check if the environment has dataverse linked")
+	}
+	environmentUrl := strings.TrimSuffix(env.Properties.LinkedEnvironmentMetadata.InstanceURL, "/")
+	if environmentUrl == "" {
+		return "", customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_URL_NOT_FOUND), "environment url not found, please check if the environment has dataverse linked")
+	}
+
+	envUrl, err := url.Parse(environmentUrl)
+	if err != nil {
+		return "", err
+	}
+	return envUrl.Host, nil
+}
+
+// GetEnvironment reads a single environment by id.
+func (client *Client) GetEnvironment(ctx context.Context, environmentId string) (*EnvironmentDto, error) {
+	// Without an id the request degrades into a "list environments" call that returns HTTP 200 with a collection body.
+	if environmentId == "" {
+		return nil, errors.New("environment id must not be empty")
+	}
+
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
+	}
+	values := url.Values{}
+	values.Add("$expand", "permissions,properties.capacity,properties/billingPolicy,properties/copilotPolicies")
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	env := EnvironmentDto{}
+	resp, err := client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &env)
+	if err != nil {
+		if resp != nil && resp.HttpResponse.StatusCode == http.StatusNotFound {
+			return nil, customerrors.WrapIntoProviderError(err, customerrors.ErrorCode(constants.ERROR_OBJECT_NOT_FOUND), fmt.Sprintf("environment '%s' not found", environmentId))
+		}
+		return nil, err
+	}
+
+	if env.Properties == nil {
+		return nil, fmt.Errorf("unexpected response when reading environment '%s': the response contains no environment properties", environmentId)
+	}
+
+	if env.Properties.LinkedEnvironmentMetadata != nil && env.Properties.LinkedEnvironmentMetadata.SecurityGroupId == "" {
+		env.Properties.LinkedEnvironmentMetadata.SecurityGroupId = constants.ZERO_UUID
+	}
+
+	if env.Properties.ParentEnvironmentGroup != nil && env.Properties.ParentEnvironmentGroup.Id == "" {
+		env.Properties.ParentEnvironmentGroup.Id = constants.ZERO_UUID
+	}
+
+	return &env, nil
+}
+
+// DeleteEnvironment deletes an environment and waits for the delete lifecycle
+// operation to finish.
+func (client *Client) DeleteEnvironment(ctx context.Context, environmentId string) error {
+	return client.deleteEnvironmentWithRetry(ctx, environmentId, 0)
+}
+
+func (client *Client) deleteEnvironmentWithRetry(ctx context.Context, environmentId string, retryCount int) error {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	environmentDelete := EnvironmentDeleteDto{
+		Code:    "7", // Application.
+		Message: "Deleted using Power Platform Terraform Provider",
+	}
+
+	expectedStatusCodes := []int{http.StatusNoContent, http.StatusAccepted, http.StatusConflict, http.StatusNotFound}
+	response, err := client.Api.Execute(ctx, client.scopes(), "DELETE", apiUrl.String(), nil, environmentDelete, expectedStatusCodes, nil)
+	if err != nil {
+		return err
+	}
+
+	// Handle HTTP 404 case - if the environment is not found, consider it already deleted
+	if response != nil && response.HttpResponse.StatusCode == http.StatusNotFound {
+		tflog.Info(ctx, fmt.Sprintf("Environment '%s' not found. Treating as successfully deleted.", environmentId))
+		return nil
+	}
+
+	if response.HttpResponse.StatusCode == http.StatusConflict {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return customerrors.NewProviderError(constants.ERROR_ENVIRONMENT_DELETION, "maximum retries (%d) reached for DeleteEnvironment on conflict", constants.MAX_RETRY_COUNT)
+		}
+		body := string(response.BodyAsBytes)
+		if body == "" {
+			// The API sometimes returns 409 with no body when a lifecycle operation is already in progress.
+			// Treat this as a transient conflict and retry after a delay.
+			tflog.Debug(ctx, "Delete returned HTTP 409 with no body, another lifecycle operation may be in progress, retrying")
+			if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+				return err
+			}
+		} else {
+			err := client.handleHttpConflict(ctx, response)
+			if err != nil {
+				return err
+			}
+		}
+		return client.deleteEnvironmentWithRetry(ctx, environmentId, retryCount+1)
+	}
+
+	tflog.Debug(ctx, "Environment Deletion Operation HTTP Status: '"+response.HttpResponse.Status+"'")
+	tflog.Debug(ctx, "Waiting for environment deletion operation to complete")
+
+	lifecycleResponse, err := client.Api.DoWaitForLifecycleOperationStatus(ctx, response)
+	if err != nil {
+		return err
+	}
+
+	if lifecycleResponse != nil && lifecycleResponse.State.Id == "Failed" {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return customerrors.NewProviderError(constants.ERROR_ENVIRONMENT_DELETION, "maximum retries (%d) reached for DeleteEnvironment on lifecycle failure", constants.MAX_RETRY_COUNT)
+		}
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return err
+		}
+		tflog.Info(ctx, "Environment deletion failed. Retrying")
+		return client.deleteEnvironmentWithRetry(ctx, environmentId, retryCount+1)
+	}
+	return nil
+}
+
+// AddDataverseToEnvironment provisions a Dataverse instance into an existing
+// environment and waits until provisioning completes.
+func (client *Client) AddDataverseToEnvironment(ctx context.Context, environmentId string, environmentCreateLinkEnvironmentMetadata CreateLinkEnvironmentMetadataDto) (*EnvironmentDto, error) {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/environments/%s/provisionInstance", environmentId),
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, environmentCreateLinkEnvironmentMetadata, []int{http.StatusAccepted}, nil)
+	if err != nil {
+		tflog.Error(ctx, "Error adding Dataverse to environment: "+err.Error())
+	}
+
+	tflog.Debug(ctx, "Environment Creation Operation HTTP Status: '"+apiResponse.HttpResponse.Status+"'")
+
+	locationHeader := apiResponse.GetHeader(constants.HEADER_LOCATION)
+	tflog.Debug(ctx, "Location Header: "+locationHeader)
+
+	_, err = url.Parse(locationHeader)
+	if err != nil {
+		tflog.Error(ctx, "Error parsing location header: "+err.Error())
+	}
+
+	retryHeader := apiResponse.GetHeader(constants.HEADER_RETRY_AFTER)
+	tflog.Debug(ctx, "Retry Header: "+retryHeader)
+	retryAfter, err := time.ParseDuration(retryHeader)
+	if err != nil {
+		retryAfter = api.DefaultRetryAfter()
+	} else {
+		retryAfter = retryAfter * time.Second
+	}
+	for {
+		lifecycleEnv := &EnvironmentDto{}
+		lifecycleResponse, err := client.Api.Execute(ctx, client.scopes(), "GET", locationHeader, nil, nil, []int{http.StatusOK, http.StatusAccepted, http.StatusConflict}, &lifecycleEnv)
+		if err != nil {
+			return nil, err
+		}
+
+		tflog.Debug(ctx, fmt.Sprintf("Dataverse Creation Operation HTTP Status: '%s'", lifecycleResponse.HttpResponse.Status))
+		if lifecycleResponse.HttpResponse.StatusCode == http.StatusConflict {
+			continue
+		}
+
+		if lifecycleEnv == nil || lifecycleEnv.Properties == nil {
+			tflog.Debug(ctx, fmt.Sprintf("The environment lifecycle response body did not match expected format. Response status code: %s", lifecycleResponse.HttpResponse.Status))
+			continue
+		}
+
+		err = client.Api.SleepWithContext(ctx, retryAfter)
+		if err != nil {
+			return nil, err
+		}
+
+		tflog.Debug(ctx, fmt.Sprintf("Dataverse Creation Operation State: '%s'", lifecycleEnv.Properties.ProvisioningState))
+
+		if lifecycleEnv.Properties.ProvisioningState == "Succeeded" {
+			return lifecycleEnv, nil
+		} else if lifecycleEnv.Properties.ProvisioningState != "LinkedDatabaseProvisioning" && lifecycleEnv.Properties.ProvisioningState != "Succeeded" {
+			return lifecycleEnv, fmt.Errorf("dataverse creation failed. provisioning state: %s", lifecycleEnv.Properties.ProvisioningState)
+		}
+	}
+}
+
+// ModifyEnvironmentType changes the SKU of an environment.
+func (client *Client) ModifyEnvironmentType(ctx context.Context, environmentId, environmentType string) error {
+	return client.modifyEnvironmentTypeWithRetry(ctx, environmentId, environmentType, 0)
+}
+
+func (client *Client) modifyEnvironmentTypeWithRetry(ctx context.Context, environmentId, environmentType string, retryCount int) error {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s/modifySku", environmentId),
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	modifySkuDto := ModifySkuDto{
+		EnvironmentSku: environmentType,
+	}
+
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, modifySkuDto, []int{http.StatusAccepted, http.StatusOK, http.StatusConflict}, nil)
+	if err != nil {
+		return err
+	}
+
+	lifecycleResponse, err := client.Api.DoWaitForLifecycleOperationStatus(ctx, apiResponse)
+	if err != nil {
+		return err
+	}
+
+	if lifecycleResponse != nil && lifecycleResponse.State.Id == "Failed" {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return fmt.Errorf("maximum retries (%d) reached for ModifyEnvironmentType on lifecycle failure", constants.MAX_RETRY_COUNT)
+		}
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return err
+		}
+		tflog.Info(ctx, "Environment update failed. Retrying")
+		return client.modifyEnvironmentTypeWithRetry(ctx, environmentId, environmentType, retryCount+1)
+	}
+	return nil
+}
+
+// CreateEnvironment creates an environment and waits until it is readable.
+func (client *Client) CreateEnvironment(ctx context.Context, environmentToCreate EnvironmentCreateDto) (*EnvironmentDto, error) {
+	return client.createEnvironmentWithRetry(ctx, environmentToCreate, 0)
+}
+
+func (client *Client) createEnvironmentWithRetry(ctx context.Context, environmentToCreate EnvironmentCreateDto, retryCount int) (*EnvironmentDto, error) {
+	if environmentToCreate.Properties.LinkedEnvironmentMetadata != nil && environmentToCreate.Location != "" && environmentToCreate.Properties.LinkedEnvironmentMetadata.DomainName != "" {
+		err := client.ValidateCreateEnvironmentDetails(ctx, environmentToCreate.Location, environmentToCreate.Properties.LinkedEnvironmentMetadata.DomainName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   "/providers/Microsoft.BusinessAppPlatform/environments",
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, environmentToCreate, []int{http.StatusAccepted, http.StatusCreated, http.StatusInternalServerError, http.StatusConflict}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiResponse.HttpResponse.StatusCode == http.StatusConflict {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return nil, fmt.Errorf("maximum retries (%d) reached for CreateEnvironment on conflict", constants.MAX_RETRY_COUNT)
+		}
+		err := client.handleHttpConflict(ctx, apiResponse)
+		if err != nil {
+			return nil, err
+		}
+		return client.createEnvironmentWithRetry(ctx, environmentToCreate, retryCount+1)
+	}
+
+	if apiResponse.HttpResponse.StatusCode == http.StatusInternalServerError {
+		return nil, customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_CREATION), string(apiResponse.BodyAsBytes))
+	}
+
+	tflog.Debug(ctx, "Environment Creation Operation HTTP Status: '"+apiResponse.HttpResponse.Status+"'")
+
+	createdEnvironmentId := ""
+	switch apiResponse.HttpResponse.StatusCode {
+	case http.StatusAccepted:
+		lifecycleResponse, err := client.Api.DoWaitForLifecycleOperationStatus(ctx, apiResponse)
+		if err != nil {
+			return nil, err
+		}
+		if lifecycleResponse == nil {
+			return nil, errors.New("environment creation failed. the create request did not return a lifecycle operation to wait for")
+		}
+		if lifecycleResponse.State.Id != "Succeeded" {
+			return nil, fmt.Errorf("environment creation failed. lifecycle operation state: %s", lifecycleResponse.State.Id)
+		}
+
+		parts := strings.Split(lifecycleResponse.Links.Environment.Path, "/")
+		createdEnvironmentId = parts[len(parts)-1]
+		tflog.Debug(ctx, "Created Environment Id: "+createdEnvironmentId)
+
+	case http.StatusCreated:
+		envCreatedResponse := LifecycleCreatedDto{}
+		err := apiResponse.MarshallTo(&envCreatedResponse)
+		if err != nil {
+			return nil, err
+		}
+		if envCreatedResponse.Properties.ProvisioningState != "Succeeded" {
+			return nil, errors.New("environment creation failed. provisioning state: " + envCreatedResponse.Properties.ProvisioningState)
+		}
+		createdEnvironmentId = envCreatedResponse.Name
+	default:
+		return nil, fmt.Errorf("unexpected HTTP status code: %d", apiResponse.HttpResponse.StatusCode)
+	}
+
+	// Guard against reading the environment with an empty id, which resolves to the environment
+	// list endpoint and would silently return an empty environment.
+	if createdEnvironmentId == "" {
+		return nil, errors.New("environment creation failed. the API did not return an id for the created environment")
+	}
+
+	env, err := client.GetEnvironment(ctx, createdEnvironmentId)
+	if err != nil {
+		// The environment was created, we just can't read it back. Return the id along with the error
+		// so the caller can still record it, otherwise Terraform never learns about an environment
+		// that exists and the next apply fails with DomainNameAlreadyInUse.
+		return &EnvironmentDto{Name: createdEnvironmentId}, fmt.Errorf("environment '%s' not found. '%s'", createdEnvironmentId, err)
+	}
+
+	if environmentToCreate.Properties.LinkedEnvironmentMetadata != nil {
+		env, err = client.WaitForDataverseMetadata(ctx, createdEnvironmentId, env)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if env.Properties.LinkedEnvironmentMetadata != nil && environmentToCreate.Properties.LinkedEnvironmentMetadata != nil && environmentToCreate.Properties.LinkedEnvironmentMetadata.Templates != nil {
+		env.Properties.LinkedEnvironmentMetadata.Templates = environmentToCreate.Properties.LinkedEnvironmentMetadata.Templates
+		env.Properties.LinkedEnvironmentMetadata.TemplateMetadata = environmentToCreate.Properties.LinkedEnvironmentMetadata.TemplateMetadata
+	}
+
+	return env, err
+}
+
+// WaitForDataverseMetadata polls the environment until its Dataverse metadata is readable. BAPI
+// reports the environment lifecycle operation as succeeded before that metadata is exposed, and
+// without it the provider would write a null `dataverse` block into state.
+func (client *Client) WaitForDataverseMetadata(ctx context.Context, environmentId string, env *EnvironmentDto) (*EnvironmentDto, error) {
+	for attempt := 0; ; attempt++ {
+		if env.Properties != nil && env.Properties.LinkedEnvironmentMetadata != nil {
+			return env, nil
+		}
+
+		if attempt >= constants.MAX_DATAVERSE_METADATA_RETRY_COUNT {
+			return nil, fmt.Errorf("dataverse was requested for environment '%s' but its metadata was still not returned by the API after %d attempts", environmentId, attempt)
+		}
+
+		tflog.Debug(ctx, fmt.Sprintf("Dataverse metadata for environment '%s' is not available yet. Retrying", environmentId))
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return nil, err
+		}
+
+		var err error
+		env, err = client.GetEnvironment(ctx, environmentId)
+		if err != nil {
+			return nil, err
+		}
+	}
+}
+
+// UpdateEnvironmentAiFeatures updates the generative AI features of an
+// environment and waits until the change is visible on reads.
+func (client *Client) UpdateEnvironmentAiFeatures(ctx context.Context, environmentId string, generativeAIConfig GenerativeAiFeaturesDto) (*EnvironmentDto, error) {
+	if err := client.updateEnvironmentAiFeaturesWithRetry(ctx, environmentId, generativeAIConfig, 0); err != nil {
+		return nil, err
+	}
+	return client.waitForEnvironmentAiFeatures(ctx, environmentId, generativeAIConfig.Properties)
+}
+
+// A successful lifecycle operation does not guarantee that the regional write is already visible on the
+// BAP read endpoint, so the environment is re-read until it reports the values that were just applied.
+func (client *Client) waitForEnvironmentAiFeatures(ctx context.Context, environmentId string, expected GenerativeAiFeaturesPropertiesDto) (*EnvironmentDto, error) {
+	maxRetries := int(constants.ENVIRONMENT_AI_FEATURES_POLL_TIMEOUT / constants.ENVIRONMENT_AI_FEATURES_POLL_INTERVAL)
+
+	for retry := 0; ; retry++ {
+		env, err := client.GetEnvironment(ctx, environmentId)
+		if err != nil {
+			return nil, err
+		}
+
+		if environmentAiFeaturesMatch(env, expected) {
+			return env, nil
+		}
+
+		if retry >= maxRetries {
+			return nil, fmt.Errorf("environment '%s' did not report the requested generative AI features within %s", environmentId, constants.ENVIRONMENT_AI_FEATURES_POLL_TIMEOUT)
+		}
+
+		tflog.Debug(ctx, "Environment generative AI features are not visible yet, retrying read")
+		if err := client.Api.SleepWithContext(ctx, constants.ENVIRONMENT_AI_FEATURES_POLL_INTERVAL); err != nil {
+			return nil, err
+		}
+	}
+}
+
+// Only the values that were sent are compared, because omitted values are left untouched by the API.
+func environmentAiFeaturesMatch(env *EnvironmentDto, expected GenerativeAiFeaturesPropertiesDto) bool {
+	if env == nil || env.Properties == nil {
+		return false
+	}
+
+	if expected.BingChatEnabled != nil && env.Properties.BingChatEnabled != *expected.BingChatEnabled {
+		return false
+	}
+	if expected.M365Enabled != nil && env.Properties.M365Enabled != *expected.M365Enabled {
+		return false
+	}
+	if expected.CopilotPolicies == nil {
+		return true
+	}
+
+	var actualCrossGeo, actualCrossBoundary bool
+	if env.Properties.CopilotPolicies != nil {
+		actualCrossGeo = isBoolPointerTrue(env.Properties.CopilotPolicies.CrossGeoCopilotDataMovementEnabled)
+		actualCrossBoundary = isBoolPointerTrue(env.Properties.CopilotPolicies.CrossBoundaryCopilotDataMovementEnabled)
+	}
+
+	if expected.CopilotPolicies.CrossGeoCopilotDataMovementEnabled != nil && actualCrossGeo != *expected.CopilotPolicies.CrossGeoCopilotDataMovementEnabled {
+		return false
+	}
+	if expected.CopilotPolicies.CrossBoundaryCopilotDataMovementEnabled != nil && actualCrossBoundary != *expected.CopilotPolicies.CrossBoundaryCopilotDataMovementEnabled {
+		return false
+	}
+	return true
+}
+
+func isBoolPointerTrue(value *bool) bool {
+	return value != nil && *value
+}
+
+func (client *Client) updateEnvironmentAiFeaturesWithRetry(ctx context.Context, environmentId string, generativeAIConfig GenerativeAiFeaturesDto, retryCount int) error {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "PATCH", apiUrl.String(), nil, generativeAIConfig, []int{http.StatusAccepted, http.StatusConflict, http.StatusNoContent}, nil)
+	if err != nil {
+		return err
+	}
+
+	if apiResponse.HttpResponse.StatusCode == http.StatusNoContent {
+		tflog.Info(ctx, "No update operation occurred for Environment AI features")
+		return nil
+	}
+
+	if apiResponse.HttpResponse.StatusCode == http.StatusConflict {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return fmt.Errorf("maximum retries (%d) reached for UpdateEnvironmentAiFeatures on conflict", constants.MAX_RETRY_COUNT)
+		}
+		err := client.handleHttpConflict(ctx, apiResponse)
+		if err != nil {
+			return err
+		}
+		return client.updateEnvironmentAiFeaturesWithRetry(ctx, environmentId, generativeAIConfig, retryCount+1)
+	}
+
+	lifecycleResponse, err := client.Api.DoWaitForLifecycleOperationStatus(ctx, apiResponse)
+	if err != nil {
+		return err
+	}
+
+	if lifecycleResponse != nil && lifecycleResponse.State.Id == "Failed" {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return fmt.Errorf("maximum retries (%d) reached for UpdateEnvironmentAiFeatures on lifecycle failure", constants.MAX_RETRY_COUNT)
+		}
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return err
+		}
+		tflog.Info(ctx, "Environment update ai features failed. Retrying")
+		return client.updateEnvironmentAiFeaturesWithRetry(ctx, environmentId, generativeAIConfig, retryCount+1)
+	}
+	return nil
+}
+
+func (client *Client) handleHttpConflict(ctx context.Context, apiResponse *api.Response) error {
+	body := string(apiResponse.BodyAsBytes)
+	if body == "" {
+		return errors.New("environment failed with HTTP 409. No body in response")
+	}
+	// if 409 returns anything other than another ongoing lifecycle operation, fail the request and return the body as error to the user
+	if !strings.Contains(body, "OperationNotStartable") {
+		return errors.New("environment failed with HTTP 409. Body: " + body)
+	}
+	tflog.Debug(ctx, "Another lifecycle operation is in progress, waiting for it to complete")
+	return client.Api.SleepWithContext(ctx, api.DefaultRetryAfter())
+}
+
+// UpdateEnvironment updates an environment and waits until it reports Ready.
+func (client *Client) UpdateEnvironment(ctx context.Context, environmentId string, environment EnvironmentDto) (*EnvironmentDto, error) {
+	return client.updateEnvironmentWithRetry(ctx, environmentId, environment, 0)
+}
+
+func (client *Client) updateEnvironmentWithRetry(ctx context.Context, environmentId string, environment EnvironmentDto, retryCount int) (*EnvironmentDto, error) {
+	if environment.Location != "" && environment.Properties.LinkedEnvironmentMetadata != nil && environment.Properties.LinkedEnvironmentMetadata.DomainName != "" {
+		err := client.ValidateUpdateEnvironmentDetails(ctx, environment.Id, environment.Properties.LinkedEnvironmentMetadata.DomainName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
+	}
+	values := url.Values{}
+	values.Add("$expand", "permissions,properties.capacity,properties/billingPolicy")
+	// Due to a bug in BAPI that triggers managed environment on update of a description field, we need to use the older API version
+	// values.Add("api-version", "2022-05-01")
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "PATCH", apiUrl.String(), nil, environment, []int{http.StatusAccepted, http.StatusConflict}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiResponse.HttpResponse.StatusCode == http.StatusConflict {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return nil, fmt.Errorf("maximum retries (%d) reached for UpdateEnvironment on conflict", constants.MAX_RETRY_COUNT)
+		}
+		err := client.handleHttpConflict(ctx, apiResponse)
+		if err != nil {
+			return nil, err
+		}
+		return client.updateEnvironmentWithRetry(ctx, environmentId, environment, retryCount+1)
+	}
+
+	// wait for the lifecycle operation to finish.
+	lifecycleResponse, err := client.Api.DoWaitForLifecycleOperationStatus(ctx, apiResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if lifecycleResponse != nil && lifecycleResponse.State.Id == "Failed" {
+		if retryCount >= constants.MAX_RETRY_COUNT {
+			return nil, fmt.Errorf("maximum retries (%d) reached for UpdateEnvironment on lifecycle failure", constants.MAX_RETRY_COUNT)
+		}
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return nil, err
+		}
+		tflog.Info(ctx, "Environment update failed. Retrying")
+		return client.updateEnvironmentWithRetry(ctx, environmentId, environment, retryCount+1)
+	}
+
+	// despite lifecycle operation success, the environment may not be ready yet.
+	for {
+		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+			return nil, err
+		}
+		env, err := client.GetEnvironment(ctx, environmentId)
+		if err != nil {
+			return nil, err
+		}
+		tflog.Info(ctx, "Environment State: '"+env.Properties.States.Management.Id+"'")
+		if env.Properties.States.Management.Id == "Ready" {
+			return env, nil
+		} else if env.Properties.States.Management.Id == "Running" {
+			continue
+		}
+		return nil, errors.New("environment update failed. unexpected management state: " + env.Properties.States.Management.Id)
+	}
+}
+
+// GetEnvironments lists all environments in the tenant.
+func (client *Client) GetEnvironments(ctx context.Context) ([]EnvironmentDto, error) {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   "/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments",
+	}
+	values := url.Values{}
+	values.Add("$expand", "properties/billingPolicy,properties/copilotPolicies")
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	envArray := EnvironmentArrayDto{}
+	_, err := client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &envArray)
+	if err != nil {
+		return nil, err
+	}
+
+	return envArray.Value, nil
+}
+
+// ValidateCreateEnvironmentDetails validates a domain name and location before
+// an environment create.
+func (client *Client) ValidateCreateEnvironmentDetails(ctx context.Context, location, domain string) error {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   "/providers/Microsoft.BusinessAppPlatform/validateEnvironmentDetails",
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	envDetails := ValidateCreateEnvironmentDetailsDto{
+		DomainName:          domain,
+		EnvironmentLocation: location,
+	}
+
+	_, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, envDetails, []int{http.StatusOK}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ValidateUpdateEnvironmentDetails validates a domain name before an
+// environment update.
+func (client *Client) ValidateUpdateEnvironmentDetails(ctx context.Context, environmentId, domain string) error {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   client.host(),
+		Path:   "/providers/Microsoft.BusinessAppPlatform/validateEnvironmentDetails",
+	}
+	values := url.Values{}
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
+	apiUrl.RawQuery = values.Encode()
+
+	envDetails := ValidateUpdateEnvironmentDetailsDto{
+		DomainName:      domain,
+		EnvironmentName: environmentId,
+	}
+
+	_, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, envDetails, []int{http.StatusOK}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

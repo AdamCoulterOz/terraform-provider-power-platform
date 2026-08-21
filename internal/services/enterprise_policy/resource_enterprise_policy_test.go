@@ -296,7 +296,7 @@ func TestUnitTestEnterprisePolicyResource_Validate_Read_ParentDeleted(t *testing
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/Validate_Create/get_lifecycle.json").String()), nil
 		})
 
-	// enterprise_policy.Read calls environment.Client.GetEnvironment which uses the URL
+	// enterprise_policy.Read calls *bapi.Client.GetEnvironment which uses the URL
 	// without query params (httpmock also matches against the stripped URL).
 	// First few calls (step 1 Read) return 200; subsequent calls (step 2 RefreshState) return 404.
 	var envCallCount = 0

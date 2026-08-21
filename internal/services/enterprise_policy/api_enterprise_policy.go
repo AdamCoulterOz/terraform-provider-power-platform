@@ -11,20 +11,20 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func newEnterprisePolicyClient(apiClient *api.Client) Client {
 	return Client{
 		Api:               apiClient,
-		EnvironmentClient: environment.NewEnvironmentClient(apiClient),
+		EnvironmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type Client struct {
 	Api               *api.Client
-	EnvironmentClient environment.Client
+	EnvironmentClient *bapi.Client
 }
 
 // buildEnterprisePolicyURL builds the URL for enterprise policy operations.

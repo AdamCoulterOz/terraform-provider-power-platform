@@ -12,20 +12,20 @@ import (
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func newCopilotStudioClient(apiClient *api.Client) client {
 	return client{
 		Api:               apiClient,
-		EnvironmentClient: environment.NewEnvironmentClient(apiClient),
+		EnvironmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	Api               *api.Client
-	EnvironmentClient environment.Client
+	EnvironmentClient *bapi.Client
 }
 
 func (client *client) getCopilotStudioEndpoint(ctx context.Context, environmentId string) (string, error) {

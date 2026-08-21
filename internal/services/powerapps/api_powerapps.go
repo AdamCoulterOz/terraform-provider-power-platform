@@ -10,20 +10,20 @@ import (
 	"net/url"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func newPowerAppssClient(apiClient *api.Client) client {
 	return client{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
 func (client *client) GetPowerApps(ctx context.Context) ([]powerAppBapiDto, error) {

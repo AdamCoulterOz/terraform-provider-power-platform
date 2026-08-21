@@ -11,20 +11,20 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment"
 )
 
 func newDisasterRecoveryClient(apiClient *api.Client) client {
 	return client{
 		Api:               apiClient,
-		environmentClient: environment.NewEnvironmentClient(apiClient),
+		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	Api               *api.Client
-	environmentClient environment.Client
+	environmentClient *bapi.Client
 }
 
 func (client *client) EnableDisasterRecovery(ctx context.Context, environmentId string) error {
@@ -48,7 +48,7 @@ func (client *client) setDisasterRecoveryWithRetry(ctx context.Context, environm
 	body := disasterRecoveryPatchDto{
 		Properties: disasterRecoveryPatchPropertiesDto{
 			States: disasterRecoveryPatchStatesDto{
-				DisasterRecovery: environment.DisasterRecoveryStateDto{
+				DisasterRecovery: bapi.DisasterRecoveryStateDto{
 					Id: state,
 				},
 			},
@@ -84,6 +84,6 @@ func (client *client) setDisasterRecoveryWithRetry(ctx context.Context, environm
 	return nil
 }
 
-func (client *client) GetDisasterRecoveryState(ctx context.Context, environmentId string) (*environment.EnvironmentDto, error) {
+func (client *client) GetDisasterRecoveryState(ctx context.Context, environmentId string) (*bapi.EnvironmentDto, error) {
 	return client.environmentClient.GetEnvironment(ctx, environmentId)
 }
