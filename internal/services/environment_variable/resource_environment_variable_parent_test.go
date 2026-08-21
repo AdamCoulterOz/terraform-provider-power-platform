@@ -19,7 +19,7 @@ func TestUnitEnvironmentVariableResource_Validate_Read_ParentDeleted(t *testing.
 	registerEnvironmentVariableHappyPathResponders()
 
 	envGetCallCount := 0
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
 		func(req *http.Request) (*http.Response, error) {
 			envGetCallCount++
 			// Step 1 (create + post-apply plan) makes 10 environment lookups; from the step 2

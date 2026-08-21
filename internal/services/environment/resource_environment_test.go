@@ -1891,6 +1891,12 @@ func TestUnitEnvironmentsResource_Validate_Update_With_Billing_Policy(t *testing
 
 	mocks.ActivateEnvironmentHttpMocks()
 
+	// Every refresh reads the environment once and then resolves the
+	// environment host twice more for the Dataverse default-currency lookup
+	// (once per table read), which now goes through the canonical bapi
+	// environment read. The sequence therefore serves each refresh fixture
+	// three times.
+	getResponseSequence := []int{1, 2, 2, 2, 3, 3, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 11, 12, 12, 12}
 	getResponseInx := 0
 	patchResponseInx := 0
 
@@ -1908,8 +1914,12 @@ func TestUnitEnvironmentsResource_Validate_Update_With_Billing_Policy(t *testing
 
 	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
+			fixture := getResponseSequence[len(getResponseSequence)-1]
+			if getResponseInx < len(getResponseSequence) {
+				fixture = getResponseSequence[getResponseInx]
+			}
 			getResponseInx++
-			return httpmock.NewStringResponse(http.StatusOK, httpmock.File(fmt.Sprintf("tests/resource/Validate_Update_With_Billing_Policy/get_environment_%d.json", getResponseInx)).String()), nil
+			return httpmock.NewStringResponse(http.StatusOK, httpmock.File(fmt.Sprintf("tests/resource/Validate_Update_With_Billing_Policy/get_environment_%d.json", fixture)).String()), nil
 		})
 
 	httpmock.RegisterResponder("GET", "https://europe.api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/lifecycleOperations/b03e1e6d-73db-4367-90e1-2e378bf7e2fc?api-version=2023-06-01",

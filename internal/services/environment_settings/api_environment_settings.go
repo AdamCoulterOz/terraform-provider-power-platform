@@ -5,24 +5,22 @@ package environment_settings
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 )
 
 func newEnvironmentSettingsClient(apiClient *api.Client) client {
 	return client{
-		Client: bapi.NewClient(apiClient),
+		Client:    bapi.NewClient(apiClient),
+		dataverse: dataverse.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	*bapi.Client
+	dataverse *dataverse.Client
 }
 
 func (client *client) DataverseExists(ctx context.Context, environmentId string) (bool, error) {
@@ -48,56 +46,20 @@ func (client *client) GetEnvironmentSettings(ctx context.Context, environmentId 
 	}, nil
 }
 
-func (client *client) getEnvironmentBackendSettings(ctx context.Context, environmentId string) (*environmentBackendSettingsValueDto, error) {
+func (client *client) getEnvironmentBackendSettings(ctx context.Context, environmentId string) (*dataverse.EnvironmentBackendSettingsValueDto, error) {
 	environmentHost, err := client.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
-
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   "/api/data/v9.0/RetrieveSettingList()",
-	}
-
-	environmentBackendSettings := environmentBackendSettingsValueDto{}
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &environmentBackendSettings)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute API request for environment backend settings %s: %w", environmentId, err)
-	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return nil, err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return nil, err
-	}
-	return &environmentBackendSettings, nil
+	return client.dataverse.GetEnvironmentBackendSettings(ctx, environmentHost)
 }
 
-func (client *client) getEnvironmentOrgSettings(ctx context.Context, environmentId string) (*environmentOrgSettingsDto, error) {
+func (client *client) getEnvironmentOrgSettings(ctx context.Context, environmentId string) (*dataverse.EnvironmentOrgSettingsDto, error) {
 	environmentHost, err := client.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
-
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   "/api/data/v9.0/organizations",
-	}
-
-	environmentOrgSettings := environmentOrgSettingsValueDto{}
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &environmentOrgSettings)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute API request for environment org settings %s: %w", environmentId, err)
-	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return nil, err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return nil, err
-	}
-	return &environmentOrgSettings.Value[0], nil
+	return client.dataverse.GetEnvironmentOrgSettings(ctx, environmentHost)
 }
 
 func (client *client) UpdateEnvironmentSettings(ctx context.Context, environmentId string, settings environmentSettings) (*environmentSettings, error) {
@@ -118,74 +80,18 @@ func (client *client) UpdateEnvironmentSettings(ctx context.Context, environment
 	return updateSettings, nil
 }
 
-func (client *client) updateEnvironmentOrgSettings(ctx context.Context, environmentId string, orgSettings environmentOrgSettingsDto) (*environmentOrgSettingsDto, error) {
+func (client *client) updateEnvironmentOrgSettings(ctx context.Context, environmentId string, orgSettings dataverse.EnvironmentOrgSettingsDto) (*dataverse.EnvironmentOrgSettingsDto, error) {
 	environmentHost, err := client.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
-
-	orgSettingsResponse, err := client.getEnvironmentOrgSettings(ctx, environmentId)
-	if err != nil {
-		return nil, err
-	}
-
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   fmt.Sprintf("/api/data/v9.0/organizations(%s)", *orgSettingsResponse.OrganizationId),
-	}
-
-	resp, err := client.Api.Execute(ctx, nil, "PATCH", apiUrl.String(), nil, orgSettings, []int{http.StatusNoContent, http.StatusInternalServerError, http.StatusForbidden, http.StatusNotFound}, nil)
-	if resp != nil && resp.HttpResponse.StatusCode == http.StatusInternalServerError {
-		return nil, customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_SETTINGS_FAILED), string(resp.BodyAsBytes))
-	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return nil, err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return nil, err
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute API request for updating environment org settings %s: %w", environmentId, err)
-	}
-
-	return client.getEnvironmentOrgSettings(ctx, environmentId)
+	return client.dataverse.UpdateEnvironmentOrgSettings(ctx, environmentHost, orgSettings)
 }
 
-func (client *client) updateEnvironmentBackendSettings(ctx context.Context, environmentId string, backendSettings environmentBackendSettingsValueDto) (*environmentBackendSettingsValueDto, error) {
+func (client *client) updateEnvironmentBackendSettings(ctx context.Context, environmentId string, backendSettings dataverse.EnvironmentBackendSettingsValueDto) (*dataverse.EnvironmentBackendSettingsValueDto, error) {
 	environmentHost, err := client.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
-	for _, setting := range backendSettings.SettingDetailCollection {
-		if setting.Name == "" || setting.Value == "" {
-			continue
-		}
-
-		apiUrl := &url.URL{
-			Scheme: constants.HTTPS,
-			Host:   environmentHost,
-			Path:   "/api/data/v9.0/SaveSettingValue()",
-		}
-
-		settingValue := setSettingValueDto{
-			SettingName: setting.Name,
-			Value:       setting.Value,
-		}
-
-		resp, err := client.Api.Execute(ctx, nil, "POST", apiUrl.String(), nil, settingValue, []int{http.StatusNoContent, http.StatusInternalServerError, http.StatusForbidden, http.StatusNotFound}, nil)
-		if resp != nil && resp.HttpResponse.StatusCode == http.StatusInternalServerError {
-			return nil, customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_SETTINGS_FAILED), string(resp.BodyAsBytes))
-		}
-		if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-			return nil, err
-		}
-		if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-			return nil, err
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute API request for updating environment backend settings %s: %w", environmentId, err)
-		}
-	}
-	return client.getEnvironmentBackendSettings(ctx, environmentId)
+	return client.dataverse.UpdateEnvironmentBackendSettings(ctx, environmentHost, backendSettings)
 }

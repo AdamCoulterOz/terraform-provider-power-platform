@@ -3,9 +3,11 @@
 
 package authorization
 
-const (
-	ROLE_ENVIRONMENT_ADMIN = "Environment Admin"
-	ROLE_ENVIRONMENT_MAKER = "Environment Maker"
+import (
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
+)
 
-	ENVIRONMENT_USER_DISPLAY_NAME_RETRY_COUNT = 5
+const (
+	ROLE_ENVIRONMENT_ADMIN = bapi.RoleEnvironmentAdmin
+	ROLE_ENVIRONMENT_MAKER = bapi.RoleEnvironmentMaker
 )

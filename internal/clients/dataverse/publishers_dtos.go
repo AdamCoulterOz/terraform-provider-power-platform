@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package publisher
+package dataverse
 
-type publisherDto struct {
+// PublisherDto is a Dataverse solution publisher record.
+type PublisherDto struct {
 	Id                             string `json:"publisherid"`
 	FriendlyName                   string `json:"friendlyname"`
 	UniqueName                     string `json:"uniquename"`
@@ -59,6 +60,7 @@ type publisherDto struct {
 	Address2UtcOffset          *int64   `json:"address2_utcoffset"`
 }
 
-type publishersDto struct {
-	Value []publisherDto `json:"value"`
+// PublishersDto is a collection of publisher records.
+type PublishersDto struct {
+	Value []PublisherDto `json:"value"`
 }
