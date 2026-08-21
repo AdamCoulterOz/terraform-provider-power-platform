@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package licensing
+package ppapi
 
-type billingPolicyCreateDto struct {
+type BillingPolicyCreateDto struct {
 	Location          string               `json:"location"`
 	Name              string               `json:"name"`
 	Status            string               `json:"status"`
