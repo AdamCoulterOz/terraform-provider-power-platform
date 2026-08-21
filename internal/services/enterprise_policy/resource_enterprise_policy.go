@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -64,7 +65,7 @@ func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest,
 		return
 	}
 
-	r.EnterprisePolicyClient = newEnterprisePolicyClient(client.Api)
+	r.EnterprisePolicyClient = bapi.NewClient(client.Api)
 	tflog.Debug(ctx, "Successfully created clients")
 }
 
@@ -154,7 +155,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	env, err := r.EnterprisePolicyClient.EnvironmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+	env, err := r.EnterprisePolicyClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)

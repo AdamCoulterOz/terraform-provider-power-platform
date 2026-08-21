@@ -8,7 +8,3 @@ const (
 	ENCRYPTION_POLICY_TYPE        = "Encryption"
 	IDENTITY_POLICY_TYPE          = "Identity"
 )
-
-type linkEnterprosePolicyDto struct {
-	SystemId string `json:"systemId"`
-}

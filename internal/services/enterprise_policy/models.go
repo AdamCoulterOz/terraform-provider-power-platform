@@ -6,12 +6,13 @@ package enterprise_policy
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type Resource struct {
 	helpers.TypeInfo
-	EnterprisePolicyClient Client
+	EnterprisePolicyClient *bapi.Client
 }
 
 type sourceModel struct {
