@@ -139,6 +139,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 
 	locations, err := d.LocationsClient.GetLocations(ctx)
 	if err != nil {
+		err = fmt.Errorf("failed to get locations: %w", err)
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading %s", d.FullTypeName()), err.Error())
 		return
 	}

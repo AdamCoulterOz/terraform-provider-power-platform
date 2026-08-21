@@ -414,7 +414,7 @@ func (r *TenantSettingsResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	stateDto, err := bapi.ApplyCorrections(ctx, plannedSettingsDto, *tenantSettingsDto)
+	stateDto, err := applyCorrections(ctx, plannedSettingsDto, *tenantSettingsDto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -450,7 +450,7 @@ func (r *TenantSettingsResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	tenant, errt := r.TenantSettingClient.GetTenant(ctx)
+	tenant, errt := r.TenantSettingClient.GetTenantAtVersion(ctx, constants.TENANT_SETTINGS_API_VERSION)
 	if errt != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Tenant Information in Read",
@@ -466,7 +466,7 @@ func (r *TenantSettingsResource) Read(ctx context.Context, req resource.ReadRequ
 		resp.Diagnostics.AddError("Unable to Convert Tenant Settings Model to DTO in Read", err.Error())
 		return
 	}
-	newStateDto, err := bapi.ApplyCorrections(ctx, oldStateDto, *tenantSettings)
+	newStateDto, err := applyCorrections(ctx, oldStateDto, *tenantSettings)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -540,7 +540,7 @@ func (r *TenantSettingsResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// need to make corrections from what the API returns to match what terraform expects
-	filteredDto, err := bapi.ApplyCorrections(ctx, plannedDto, *updatedSettingsDto)
+	filteredDto, err := applyCorrections(ctx, plannedDto, *updatedSettingsDto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -590,7 +590,7 @@ func (r *TenantSettingsResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	correctedDto, err := bapi.ApplyCorrections(ctx, stateDto, originalSettings)
+	correctedDto, err := applyCorrections(ctx, stateDto, originalSettings)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error applying corrections", fmt.Sprintf("Error applying corrections: %s", err.Error()),
@@ -624,7 +624,7 @@ func (r *TenantSettingsResource) ModifyPlan(ctx context.Context, req resource.Mo
 		// this is create
 		req.Plan.Get(ctx, &plan)
 		if plan.Id.IsUnknown() || plan.Id.IsNull() {
-			tenant, errt := r.TenantSettingClient.GetTenant(ctx)
+			tenant, errt := r.TenantSettingClient.GetTenantAtVersion(ctx, constants.TENANT_SETTINGS_API_VERSION)
 			if errt != nil {
 				resp.Diagnostics.AddError(
 					"Unable to Read Tenant Information in ModifyPlan",

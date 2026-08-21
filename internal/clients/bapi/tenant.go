@@ -25,6 +25,13 @@ type TenantDto struct {
 
 // GetTenant reads the tenant behind the current credentials.
 func (client *Client) GetTenant(ctx context.Context) (*TenantDto, error) {
+	return client.GetTenantAtVersion(ctx, "2021-04-01")
+}
+
+// GetTenantAtVersion reads the tenant using a specific api-version. Some
+// callers depend on the shape of a particular version; keep their original
+// version until the consolidation is acceptance-tested per cloud.
+func (client *Client) GetTenantAtVersion(ctx context.Context, apiVersion string) (*TenantDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
 		Host:   client.host(),
@@ -32,7 +39,7 @@ func (client *Client) GetTenant(ctx context.Context) (*TenantDto, error) {
 	}
 
 	values := url.Values{}
-	values.Add("api-version", "2021-04-01")
+	values.Add("api-version", apiVersion)
 	apiUrl.RawQuery = values.Encode()
 
 	var dto TenantDto
