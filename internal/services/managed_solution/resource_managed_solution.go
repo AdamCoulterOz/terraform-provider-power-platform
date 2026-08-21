@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/solution"
@@ -532,7 +533,7 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 		return nil
 	}
 
-	operation := importOperationInstall
+	operation := dataverse.StagedImportOperationInstall
 	if installedErr == nil {
 		adoptExact, decidedOperation, decisionErr := managedSolutionImportDecision(
 			installed.Version,
@@ -583,14 +584,14 @@ func (r *Resource) applyManagedSolution(ctx context.Context, plan *ResourceModel
 // create carrying connection bindings, uses ImportSolutionAsync so target wiring is made
 // authoritative without pretending that immutable package content changed. A higher version uses
 // StageAndUpgradeAsync so omitted managed components are removed.
-func managedSolutionImportDecision(installedVersion, configuredVersion string, allowExactAdoption, hasComponentParameters bool) (adoptExact bool, operation importOperation, err error) {
+func managedSolutionImportDecision(installedVersion, configuredVersion string, allowExactAdoption, hasComponentParameters bool) (adoptExact bool, operation dataverse.StagedImportOperation, err error) {
 	installed, err := normalizedSolutionVersionParts(installedVersion)
 	if err != nil {
-		return false, importOperationInstall, fmt.Errorf("installed managed solution version %q is invalid: %w", installedVersion, err)
+		return false, dataverse.StagedImportOperationInstall, fmt.Errorf("installed managed solution version %q is invalid: %w", installedVersion, err)
 	}
 	configured, err := normalizedSolutionVersionParts(configuredVersion)
 	if err != nil {
-		return false, importOperationInstall, fmt.Errorf("configured managed solution version %q is invalid: %w", configuredVersion, err)
+		return false, dataverse.StagedImportOperationInstall, fmt.Errorf("configured managed solution version %q is invalid: %w", configuredVersion, err)
 	}
 
 	comparison := 0
@@ -607,14 +608,14 @@ func managedSolutionImportDecision(installedVersion, configuredVersion string, a
 
 	switch {
 	case comparison < 0:
-		return false, importOperationInstall, fmt.Errorf(
+		return false, dataverse.StagedImportOperationInstall, fmt.Errorf(
 			"configured version %q is lower than installed version %q; managed solution deployment must move forward",
 			configuredVersion,
 			installedVersion)
 	case comparison > 0:
-		return false, importOperationStageAndUpgrade, nil
+		return false, dataverse.StagedImportOperationStageAndUpgrade, nil
 	default:
-		return allowExactAdoption && !hasComponentParameters, importOperationInstall, nil
+		return allowExactAdoption && !hasComponentParameters, dataverse.StagedImportOperationInstall, nil
 	}
 }
 

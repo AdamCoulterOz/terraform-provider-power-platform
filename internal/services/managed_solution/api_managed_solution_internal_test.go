@@ -13,6 +13,7 @@ import (
 
 	"github.com/jarcoal/httpmock"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/config"
 	"github.com/stretchr/testify/require"
 )
@@ -75,9 +76,9 @@ func TestUnitManagedSolutionImportDecisionSeparatesPackageUpgradeFromTargetRebin
 
 			require.NoError(t, err)
 			require.Equal(t, test.wantAdoption, adopt)
-			wantOperation := importOperationInstall
+			wantOperation := dataverse.StagedImportOperationInstall
 			if test.wantStageAndUpgrade {
-				wantOperation = importOperationStageAndUpgrade
+				wantOperation = dataverse.StagedImportOperationStageAndUpgrade
 			}
 			require.Equal(t, wantOperation, operation)
 		})
@@ -112,7 +113,7 @@ func TestUnitApplyManagedSolution_UsesStageAndUpgradeForUpdates(t *testing.T) {
 }`), nil
 		})
 	stageAndUpgradeCalled := false
-	var importRequest importSolutionDto
+	var importRequest dataverse.StagedImportSolutionDto
 	httpmock.RegisterResponder("POST", "https://example.crm.dynamics.com/api/data/v9.2/StageAndUpgradeAsync",
 		func(req *http.Request) (*http.Response, error) {
 			stageAndUpgradeCalled = true
@@ -144,7 +145,7 @@ func TestUnitApplyManagedSolution_UsesStageAndUpgradeForUpdates(t *testing.T) {
 		"00000000-0000-0000-0000-000000000001",
 		[]byte("managed-package"),
 		nil,
-		importOperationStageAndUpgrade,
+		dataverse.StagedImportOperationStageAndUpgrade,
 		true)
 
 	require.NoError(t, err)
@@ -155,83 +156,5 @@ func TestUnitApplyManagedSolution_UsesStageAndUpgradeForUpdates(t *testing.T) {
 	require.Equal(t, "MetaForm", solution.Name)
 }
 
-func TestUnitApplyManagedSolution_DoesNotReplayAmbiguousImportStart(t *testing.T) {
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	registerManagedSolutionApiEnvironment(t)
-	registerManagedSolutionStage(t)
-	attempts := 0
-	httpmock.RegisterResponder("POST", "https://example.crm.dynamics.com/api/data/v9.2/ImportSolutionAsync",
-		func(req *http.Request) (*http.Response, error) {
-			attempts++
-			return httpmock.NewStringResponse(http.StatusServiceUnavailable, `{"error":"ambiguous"}`), nil
-		})
-
-	cfg := &config.ProviderConfig{
-		TestMode: true,
-		Urls:     config.ProviderConfigUrls{BapiUrl: "api.bap.microsoft.com"},
-	}
-	client := NewManagedSolutionClient(api.NewApiClientBase(cfg, api.NewAuthBase(cfg)))
-	_, err := client.ApplyManagedSolution(
-		context.Background(),
-		"00000000-0000-0000-0000-000000000001",
-		[]byte("managed-package"),
-		nil,
-		importOperationInstall,
-		true)
-
-	require.Error(t, err)
-	require.Equal(t, 1, attempts, "an ambiguous ImportSolutionAsync response must not replay the import")
-}
-
-func TestUnitPublishAllCustomizations_UsesDataversePublishAllXml(t *testing.T) {
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	registerManagedSolutionApiEnvironment(t)
-	called := 0
-	httpmock.RegisterResponder("POST", "https://example.crm.dynamics.com/api/data/v9.2/PublishAllXml",
-		func(req *http.Request) (*http.Response, error) {
-			called++
-			return httpmock.NewStringResponse(http.StatusNoContent, ""), nil
-		})
-
-	cfg := &config.ProviderConfig{
-		TestMode: true,
-		Urls:     config.ProviderConfigUrls{BapiUrl: "api.bap.microsoft.com"},
-	}
-	client := NewManagedSolutionClient(api.NewApiClientBase(cfg, api.NewAuthBase(cfg)))
-	err := client.PublishAllCustomizations(context.Background(), "00000000-0000-0000-0000-000000000001")
-
-	require.NoError(t, err)
-	require.Equal(t, 1, called)
-}
-
-func registerManagedSolutionApiEnvironment(t *testing.T) {
-	t.Helper()
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(http.StatusOK, `{
-  "id":"00000000-0000-0000-0000-000000000001",
-  "name":"env",
-  "properties":{"linkedEnvironmentMetadata":{"instanceURL":"https://example.crm.dynamics.com/"}}
-}`), nil
-		})
-}
-
-func registerManagedSolutionStage(t *testing.T) {
-	t.Helper()
-	httpmock.RegisterResponder("POST", "https://example.crm.dynamics.com/api/data/v9.2/StageSolution",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(http.StatusOK, `{
-  "StageSolutionResults":{
-    "StageSolutionUploadId":"upload-id",
-    "StageSolutionStatus":"Passed",
-    "SolutionValidationResults":[],
-    "MissingDependencies":[],
-    "SolutionDetails":{"SolutionUniqueName":"MetaForm"}
-  }
-}`), nil
-		})
-}
+// The import-start no-replay pin and the PublishAllXml request pin moved with
+// their subjects to internal/clients/dataverse/solution_staging_internal_test.go.
