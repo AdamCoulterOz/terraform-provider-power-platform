@@ -6,6 +6,7 @@ package connectors
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/powerapps"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -31,7 +32,7 @@ type DataSourceModel struct {
 	Unblockable types.Bool   `tfsdk:"unblockable"`
 }
 
-func convertFromConnectorDto(connectorDto connectorDto) DataSourceModel {
+func convertFromConnectorDto(connectorDto powerapps.ConnectorDto) DataSourceModel {
 	return DataSourceModel{
 		Id:          types.StringValue(connectorDto.Id),
 		Name:        types.StringValue(connectorDto.Name),

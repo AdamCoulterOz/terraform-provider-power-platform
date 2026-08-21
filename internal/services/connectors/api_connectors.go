@@ -5,85 +5,57 @@ package connectors
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/powerapps"
 )
 
 func newConnectorsClient(apiClient *api.Client) client {
 	return client{
-		Api: apiClient,
+		Client:                  powerapps.NewClient(apiClient),
+		connectorMetadataClient: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
-	Api *api.Client
+	*powerapps.Client
+	connectorMetadataClient *bapi.Client
 }
 
-func (client *client) GetConnectors(ctx context.Context, environmentId string) ([]connectorDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.PowerAppsUrl,
-		Path:   "/providers/Microsoft.PowerApps/apis",
-	}
-	values := url.Values{}
-	values.Add(constants.API_VERSION_PARAM, constants.CONNECTORS_API_VERSION)
-	values.Add("showApisWithToS", "true")
-	values.Add("hideDlpExemptApis", "true")
-	values.Add("showAllDlpEnforceableApis", "true")
-
-	if environmentId == "" {
-		environmentId = "~Default"
-	}
-	values.Add("$filter", fmt.Sprintf("environment eq '%s'", environmentId))
-
-	apiUrl.RawQuery = values.Encode()
-
-	connectorArray := connectorArrayDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &connectorArray)
+// GetConnectors merges the PowerApps connector list of an environment with the
+// BAPI governance metadata (unblockable and virtual connectors), so the
+// composition lives here in the service.
+func (client *client) GetConnectors(ctx context.Context, environmentId string) ([]powerapps.ConnectorDto, error) {
+	connectors, err := client.Client.GetConnectors(ctx, environmentId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch PowerApps connectors: %w", err)
+		return nil, err
 	}
 
-	apiUrl = &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   "/providers/PowerPlatform.Governance/v1/connectors/metadata/unblockable",
-	}
-	unblockableConnectorArray := []unblockableConnectorDto{}
-	_, err = client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &unblockableConnectorArray)
+	unblockableConnectorArray, err := client.connectorMetadataClient.GetUnblockableConnectorsMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch unblockable connectors metadata: %w", err)
+		return nil, err
 	}
 
-	for inx, connector := range connectorArray.Value {
+	for inx, connector := range connectors {
 		for _, unblockableConnector := range unblockableConnectorArray {
 			if connector.Id == unblockableConnector.Id {
-				connectorArray.Value[inx].Properties.Unblockable = unblockableConnector.Metadata.Unblockable
+				connectors[inx].Properties.Unblockable = unblockableConnector.Metadata.Unblockable
 			}
 		}
 	}
 
-	apiUrl = &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   "/providers/PowerPlatform.Governance/v1/connectors/metadata/virtual",
-	}
-	virtualConnectorArray := []virtualConnectorDto{}
-	_, err = client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &virtualConnectorArray)
+	virtualConnectorArray, err := client.connectorMetadataClient.GetVirtualConnectorsMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch virtual connectors metadata: %w", err)
+		return nil, err
 	}
 	for _, virutualConnector := range virtualConnectorArray {
-		connectorArray.Value = append(connectorArray.Value, connectorDto{
+		connectors = append(connectors, powerapps.ConnectorDto{
 			Id:   virutualConnector.Id,
 			Name: virutualConnector.Metadata.Name,
 			Type: virutualConnector.Metadata.Type,
-			Properties: connectorPropertiesDto{
+			Properties: powerapps.ConnectorPropertiesDto{
 				DisplayName: virutualConnector.Metadata.DisplayName,
 				Unblockable: false,
 				Tier:        "Built-in",
@@ -93,10 +65,10 @@ func (client *client) GetConnectors(ctx context.Context, environmentId string) (
 		})
 	}
 
-	for inx, connector := range connectorArray.Value {
+	for inx, connector := range connectors {
 		nameSplit := strings.Split(connector.Id, "/")
-		connectorArray.Value[inx].Name = nameSplit[len(nameSplit)-1]
+		connectors[inx].Name = nameSplit[len(nameSplit)-1]
 	}
 
-	return connectorArray.Value, nil
+	return connectors, nil
 }
