@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 )
 
 var privacyAndSecurityTestAttrTypes = map[string]attr.Type{
@@ -21,7 +22,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_OmittedBlock_Omits
 	model := EnvironmentSettingsResourceModel{
 		PrivacyAndSecurity: types.ObjectNull(privacyAndSecurityTestAttrTypes),
 	}
-	dto := &environmentOrgSettingsDto{}
+	dto := &dataverse.EnvironmentOrgSettingsDto{}
 
 	if err := convertFromEnvironmentPrivacyAndSecuritySettings(context.Background(), model, dto); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -39,7 +40,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_UnknownBlock_Omits
 	model := EnvironmentSettingsResourceModel{
 		PrivacyAndSecurity: types.ObjectUnknown(privacyAndSecurityTestAttrTypes),
 	}
-	dto := &environmentOrgSettingsDto{}
+	dto := &dataverse.EnvironmentOrgSettingsDto{}
 
 	if err := convertFromEnvironmentPrivacyAndSecuritySettings(context.Background(), model, dto); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -59,7 +60,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_OmittedAttribute_O
 			"blocked_attachment_extensions": types.SetNull(types.StringType),
 		}),
 	}
-	dto := &environmentOrgSettingsDto{}
+	dto := &dataverse.EnvironmentOrgSettingsDto{}
 
 	if err := convertFromEnvironmentPrivacyAndSecuritySettings(context.Background(), model, dto); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -79,7 +80,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_EmptySet_ClearsBlo
 			"blocked_attachment_extensions": types.SetValueMust(types.StringType, []attr.Value{}),
 		}),
 	}
-	dto := &environmentOrgSettingsDto{}
+	dto := &dataverse.EnvironmentOrgSettingsDto{}
 
 	if err := convertFromEnvironmentPrivacyAndSecuritySettings(context.Background(), model, dto); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -106,7 +107,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_PopulatedSet_Joins
 			}),
 		}),
 	}
-	dto := &environmentOrgSettingsDto{}
+	dto := &dataverse.EnvironmentOrgSettingsDto{}
 
 	if err := convertFromEnvironmentPrivacyAndSecuritySettings(context.Background(), model, dto); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -125,7 +126,7 @@ func TestUnitConvertFromEnvironmentPrivacyAndSecuritySettings_PopulatedSet_Joins
 
 // blockedAttachmentsInPatchBody reports whether the serialized PATCH payload
 // contains the blockedattachments field at all.
-func blockedAttachmentsInPatchBody(t *testing.T, dto *environmentOrgSettingsDto) bool {
+func blockedAttachmentsInPatchBody(t *testing.T, dto *dataverse.EnvironmentOrgSettingsDto) bool {
 	t.Helper()
 
 	body, err := json.Marshal(dto)
