@@ -6,12 +6,13 @@ package environment_templates
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type EnvironmentTemplatesDataSource struct {
 	helpers.TypeInfo
-	EnvironmentTemplatesClient client
+	EnvironmentTemplatesClient *bapi.Client
 }
 
 type EnvironmentTemplatesDataSourceModel struct {

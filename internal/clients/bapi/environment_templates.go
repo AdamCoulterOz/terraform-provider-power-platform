@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package environment_templates
+package bapi
 
 import (
 	"context"
@@ -10,33 +10,24 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-func newEnvironmentTemplatesClient(apiClient *api.Client) client {
-	return client{
-		Api: apiClient,
-	}
-}
-
-type client struct {
-	Api *api.Client
-}
-
-func (client *client) GetEnvironmentTemplatesByLocation(ctx context.Context, location string) (environmentTemplateDto, error) {
+// GetEnvironmentTemplatesByLocation lists the environment templates available
+// in a location, grouped by category.
+func (client *Client) GetEnvironmentTemplatesByLocation(ctx context.Context, location string) (EnvironmentTemplateDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/locations/%s/templates", location),
 	}
 	values := url.Values{}
 	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
-	templates := environmentTemplateDto{}
+	templates := EnvironmentTemplateDto{}
 
-	response, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, nil)
+	response, err := client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, nil)
 	if err != nil {
 		return templates, fmt.Errorf("failed to execute API request for environment templates: %w", err)
 	}

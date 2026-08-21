@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -123,14 +124,14 @@ func (d *EnvironmentTemplatesDataSource) Configure(ctx context.Context, req data
 		)
 		return
 	}
-	d.EnvironmentTemplatesClient = newEnvironmentTemplatesClient(client.Api)
+	d.EnvironmentTemplatesClient = bapi.NewClient(client.Api)
 }
 
 func (d *EnvironmentTemplatesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	ctx, exitContext := helpers.EnterRequestContext(ctx, d.TypeInfo, req)
 	defer exitContext()
 
-	appendToList := func(items []itemDto, category string, list *[]EnvironmentTemplatesDataModel) {
+	appendToList := func(items []bapi.ItemDto, category string, list *[]EnvironmentTemplatesDataModel) {
 		for _, item := range items {
 			*list = append(*list, EnvironmentTemplatesDataModel{
 				Category:                     category,
