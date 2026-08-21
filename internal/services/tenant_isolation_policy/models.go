@@ -10,13 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 // Resource represents the tenant isolation policy resource.
 type Resource struct {
 	helpers.TypeInfo
-	Client Client
+	Client *bapi.Client
 }
 
 // Resource model for tenant isolation policy.
@@ -34,7 +35,7 @@ type AllowedTenantModel struct {
 }
 
 // convertToDto converts the Terraform model to the API DTO.
-func convertToDto(ctx context.Context, tenantId string, model *TenantIsolationPolicyResourceModel) (*TenantIsolationPolicyDto, diag.Diagnostics) {
+func convertToDto(ctx context.Context, tenantId string, model *TenantIsolationPolicyResourceModel) (*bapi.TenantIsolationPolicyDto, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var tenantsModel []AllowedTenantModel
 	diags.Append(model.AllowedTenants.ElementsAs(ctx, &tenantsModel, false)...)
@@ -43,21 +44,21 @@ func convertToDto(ctx context.Context, tenantId string, model *TenantIsolationPo
 	}
 
 	// Convert AllowedTenants to DTO
-	dtoTenants := make([]AllowedTenantDto, 0, len(tenantsModel))
+	dtoTenants := make([]bapi.AllowedTenantDto, 0, len(tenantsModel))
 	for _, allowedTenant := range tenantsModel {
 		inbound := allowedTenant.Inbound.ValueBool()
 		outbound := allowedTenant.Outbound.ValueBool()
-		dtoTenants = append(dtoTenants, AllowedTenantDto{
+		dtoTenants = append(dtoTenants, bapi.AllowedTenantDto{
 			TenantId: allowedTenant.TenantId.ValueString(),
-			Direction: DirectionDto{
+			Direction: bapi.DirectionDto{
 				Inbound:  &inbound,
 				Outbound: &outbound,
 			},
 		})
 	}
 
-	return &TenantIsolationPolicyDto{
-		Properties: TenantIsolationPolicyPropertiesDto{
+	return &bapi.TenantIsolationPolicyDto{
+		Properties: bapi.TenantIsolationPolicyPropertiesDto{
 			TenantId:       tenantId,
 			IsDisabled:     model.IsDisabled.ValueBoolPointer(),
 			AllowedTenants: dtoTenants,
@@ -66,7 +67,7 @@ func convertToDto(ctx context.Context, tenantId string, model *TenantIsolationPo
 }
 
 // convertFromDto converts the API DTO to the Terraform model.
-func convertFromDto(ctx context.Context, dto *TenantIsolationPolicyDto) (TenantIsolationPolicyResourceModel, diag.Diagnostics) {
+func convertFromDto(ctx context.Context, dto *bapi.TenantIsolationPolicyDto) (TenantIsolationPolicyResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if dto == nil {
@@ -76,7 +77,7 @@ func convertFromDto(ctx context.Context, dto *TenantIsolationPolicyDto) (TenantI
 	// Set defaults in case Properties is nil
 	tenantId := ""
 	var isDisabled *bool
-	var allowedTenants []AllowedTenantDto
+	var allowedTenants []bapi.AllowedTenantDto
 
 	if dto.Properties.TenantId != "" {
 		tenantId = dto.Properties.TenantId
@@ -143,7 +144,7 @@ func createObjectFromAllowedTenant(allowedTenant AllowedTenantModel) attr.Value 
 }
 
 // convertAllowedTenantsFromDto converts the API DTO to the Terraform model.
-func convertAllowedTenantsFromDto(dtoTenants []AllowedTenantDto) []AllowedTenantModel {
+func convertAllowedTenantsFromDto(dtoTenants []bapi.AllowedTenantDto) []AllowedTenantModel {
 	if dtoTenants == nil {
 		return []AllowedTenantModel{}
 	}

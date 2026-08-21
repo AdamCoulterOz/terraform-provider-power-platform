@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package tenant_isolation_policy
+package bapi
 
 import (
 	"context"
@@ -14,23 +14,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-func NewTenantIsolationPolicyClient(apiClient *api.Client, tenantClient *bapi.Client) Client {
-	return Client{
-		Api:       apiClient,
-		TenantApi: tenantClient,
-	}
-}
-
-type Client struct {
-	Api       *api.Client
-	TenantApi *bapi.Client
-}
-
-// getTenantIsolationPolicy retrieves the tenant isolation policy for the specified tenant.
+// GetTenantIsolationPolicy retrieves the tenant isolation policy for the specified tenant.
 // If no policy exists, it returns nil without error (HTTP 404).
 //
 // Parameters:
@@ -40,15 +27,15 @@ type Client struct {
 // Returns:
 //   - *TenantIsolationPolicyDto: The retrieved policy or nil if not found
 //   - error: Any error encountered during the API operation
-func (client *Client) getTenantIsolationPolicy(ctx context.Context, tenantId string) (*TenantIsolationPolicyDto, error) {
+func (client *Client) GetTenantIsolationPolicy(ctx context.Context, tenantId string) (*TenantIsolationPolicyDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v1/tenants/%s/tenantIsolationPolicy", tenantId),
 	}
 
 	var policy TenantIsolationPolicyDto
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNotFound}, &policy)
+	resp, err := client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNotFound}, &policy)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve tenant isolation policy for tenant %s: %w", tenantId, err)
 	}
@@ -61,7 +48,7 @@ func (client *Client) getTenantIsolationPolicy(ctx context.Context, tenantId str
 	return &policy, nil
 }
 
-// createOrUpdateTenantIsolationPolicy applies a new or updates an existing tenant isolation policy.
+// CreateOrUpdateTenantIsolationPolicy applies a new or updates an existing tenant isolation policy.
 // This operation may be asynchronous (HTTP 202) or synchronous (HTTP 200).
 // For asynchronous operations, it polls until completion before returning the result.
 //
@@ -73,15 +60,15 @@ func (client *Client) getTenantIsolationPolicy(ctx context.Context, tenantId str
 // Returns:
 //   - *TenantIsolationPolicyDto: The created or updated policy
 //   - error: Any error from the operation or polling process
-func (client *Client) createOrUpdateTenantIsolationPolicy(ctx context.Context, tenantId string, policy TenantIsolationPolicyDto) (*TenantIsolationPolicyDto, error) {
+func (client *Client) CreateOrUpdateTenantIsolationPolicy(ctx context.Context, tenantId string, policy TenantIsolationPolicyDto) (*TenantIsolationPolicyDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v1/tenants/%s/tenantIsolationPolicy", tenantId),
 	}
 
 	var updatedPolicy TenantIsolationPolicyDto
-	resp, err := client.Api.Execute(ctx, nil, "PUT", apiUrl.String(), nil, policy, []int{http.StatusOK, http.StatusAccepted}, &updatedPolicy)
+	resp, err := client.Api.Execute(ctx, client.scopes(), "PUT", apiUrl.String(), nil, policy, []int{http.StatusOK, http.StatusAccepted}, &updatedPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("could not create tenant isolation policy: %w", err)
 	}
@@ -89,13 +76,13 @@ func (client *Client) createOrUpdateTenantIsolationPolicy(ctx context.Context, t
 	if resp.HttpResponse.StatusCode == http.StatusAccepted {
 		// Handle async operation
 		tflog.Info(ctx, fmt.Sprintf("Tenant isolation policy operation is asynchronous for tenant %s, waiting for completion...", tenantId))
-		_, err := client.doWaitForLifecycleOperationStatus(ctx, resp)
+		_, err := client.doWaitForTenantIsolationLifecycleOperationStatus(ctx, resp)
 		if err != nil {
 			return nil, fmt.Errorf("error waiting for tenant isolation policy operation to complete: %w", err)
 		}
 
 		// Get fresh state after async operation
-		finalPolicy, err := client.getTenantIsolationPolicy(ctx, tenantId)
+		finalPolicy, err := client.GetTenantIsolationPolicy(ctx, tenantId)
 		if err != nil {
 			return nil, fmt.Errorf("error getting tenant isolation policy after async operation: %w", err)
 		}
@@ -106,9 +93,9 @@ func (client *Client) createOrUpdateTenantIsolationPolicy(ctx context.Context, t
 	return &updatedPolicy, nil
 }
 
-// getRetryAfterDuration handles Retry-After header parsing.
+// getTenantIsolationRetryAfterDuration handles Retry-After header parsing.
 // TODO: Consider using shared implementation from api package once exported.
-func getRetryAfterDuration(resp *http.Response) time.Duration {
+func getTenantIsolationRetryAfterDuration(resp *http.Response) time.Duration {
 	// Default value if header not present or invalid
 	defaultDuration := 5 * time.Second
 
@@ -141,7 +128,7 @@ func getRetryAfterDuration(resp *http.Response) time.Duration {
 	return defaultDuration
 }
 
-// doWaitForLifecycleOperationStatus polls an asynchronous operation until completion.
+// doWaitForTenantIsolationLifecycleOperationStatus polls an asynchronous operation until completion.
 // It follows the location header from the initial response, respects Retry-After
 // headers to control polling frequency, and implements exponential backoff with
 // minimum 2s and maximum 60s between attempts.
@@ -153,7 +140,7 @@ func getRetryAfterDuration(resp *http.Response) time.Duration {
 // Returns:
 //   - *TenantIsolationPolicyDto: Always nil (caller should get fresh state)
 //   - error: Any error encountered during the polling process
-func (client *Client) doWaitForLifecycleOperationStatus(ctx context.Context, response *api.Response) (*TenantIsolationPolicyDto, error) {
+func (client *Client) doWaitForTenantIsolationLifecycleOperationStatus(ctx context.Context, response *api.Response) (*TenantIsolationPolicyDto, error) {
 	locationHeader := response.GetHeader(constants.HEADER_LOCATION)
 	if locationHeader == "" {
 		locationHeader = response.GetHeader(constants.HEADER_OPERATION_LOCATION)
@@ -165,7 +152,7 @@ func (client *Client) doWaitForLifecycleOperationStatus(ctx context.Context, res
 	}
 
 	for {
-		apiResp, err := client.Api.Execute(ctx, nil, "GET", locationHeader, nil, nil, []int{http.StatusOK, http.StatusAccepted, http.StatusConflict}, nil)
+		apiResp, err := client.Api.Execute(ctx, client.scopes(), "GET", locationHeader, nil, nil, []int{http.StatusOK, http.StatusAccepted, http.StatusConflict}, nil)
 		if err != nil {
 			return nil, fmt.Errorf("error polling operation status: %w", err)
 		}
@@ -182,7 +169,7 @@ func (client *Client) doWaitForLifecycleOperationStatus(ctx context.Context, res
 		}
 
 		// Get the next wait time from the Retry-After header if available
-		waitTime := getRetryAfterDuration(apiResp.HttpResponse)
+		waitTime := getTenantIsolationRetryAfterDuration(apiResp.HttpResponse)
 
 		tflog.Debug(ctx, fmt.Sprintf("Waiting for %s before polling again", waitTime))
 

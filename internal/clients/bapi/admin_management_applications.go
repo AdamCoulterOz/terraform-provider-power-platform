@@ -1,41 +1,31 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package admin_management_application
+package bapi
 
 import (
 	"context"
-
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-func newAdminManagementApplicationClient(clientApi *api.Client) client {
-	return client{
-		Api: clientApi,
-	}
-}
-
-type client struct {
-	Api *api.Client
-}
-
-func (client *client) GetAdminApplication(ctx context.Context, clientId string) (*adminManagementApplicationDto, error) {
+// GetAdminApplication reads a registered admin management application by its
+// client id.
+func (client *Client) GetAdminApplication(ctx context.Context, clientId string) (*AdminManagementApplicationDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/adminApplications/%s", clientId),
 		RawQuery: url.Values{
 			constants.API_VERSION_PARAM: []string{constants.ADMIN_MANAGEMENT_APP_API_VERSION},
 		}.Encode(),
 	}
 
-	var adminApp adminManagementApplicationDto
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &adminApp)
+	var adminApp AdminManagementApplicationDto
+	_, err := client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &adminApp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get admin app %s: %w", clientId, err)
 	}
@@ -44,18 +34,20 @@ func (client *client) GetAdminApplication(ctx context.Context, clientId string) 
 	return &adminApp, err
 }
 
-func (client *client) RegisterAdminApplication(ctx context.Context, clientId string) (*adminManagementApplicationDto, error) {
+// RegisterAdminApplication registers a service principal as an admin
+// management application.
+func (client *Client) RegisterAdminApplication(ctx context.Context, clientId string) (*AdminManagementApplicationDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/adminApplications/%s", clientId),
 		RawQuery: url.Values{
 			constants.API_VERSION_PARAM: []string{constants.ADMIN_MANAGEMENT_APP_API_VERSION},
 		}.Encode(),
 	}
 
-	var adminApp adminManagementApplicationDto
-	_, err := client.Api.Execute(ctx, nil, "PUT", apiUrl.String(), nil, nil, []int{http.StatusOK}, &adminApp)
+	var adminApp AdminManagementApplicationDto
+	_, err := client.Api.Execute(ctx, client.scopes(), "PUT", apiUrl.String(), nil, nil, []int{http.StatusOK}, &adminApp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register admin app %s: %w", clientId, err)
 	}
@@ -64,17 +56,19 @@ func (client *client) RegisterAdminApplication(ctx context.Context, clientId str
 	return &adminApp, err
 }
 
-func (client *client) UnregisterAdminApplication(ctx context.Context, clientId string) error {
+// UnregisterAdminApplication removes an admin management application
+// registration.
+func (client *Client) UnregisterAdminApplication(ctx context.Context, clientId string) error {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/adminApplications/%s", clientId),
 		RawQuery: url.Values{
 			constants.API_VERSION_PARAM: []string{constants.ADMIN_MANAGEMENT_APP_API_VERSION},
 		}.Encode(),
 	}
 
-	_, err := client.Api.Execute(ctx, nil, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent}, nil)
+	_, err := client.Api.Execute(ctx, client.scopes(), "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNoContent}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to unregister admin app %s: %w", clientId, err)
 	}

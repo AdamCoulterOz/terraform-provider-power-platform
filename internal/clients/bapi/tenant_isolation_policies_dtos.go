@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package tenant_isolation_policy
+package bapi
 
 // TenantIsolationPolicyDto represents the API data transfer object for tenant isolation policy.
 type TenantIsolationPolicyDto struct {
