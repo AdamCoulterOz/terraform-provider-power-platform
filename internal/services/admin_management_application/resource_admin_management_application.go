@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customtypes"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -81,7 +82,7 @@ func (r *AdminManagementApplicationResource) Configure(ctx context.Context, req 
 		return
 	}
 
-	r.AdminManagementApplicationClient = newAdminManagementApplicationClient(client.Api)
+	r.AdminManagementApplicationClient = bapi.NewClient(client.Api)
 }
 
 func (r *AdminManagementApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

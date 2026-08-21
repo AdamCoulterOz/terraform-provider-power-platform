@@ -117,8 +117,7 @@ func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest,
 		return
 	}
 
-	tenantClient := bapi.NewClient(client.Api)
-	r.Client = NewTenantIsolationPolicyClient(client.Api, tenantClient)
+	r.Client = bapi.NewClient(client.Api)
 }
 
 // ValidateConfig validates the resource configuration.
@@ -162,7 +161,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	// Get the current tenant ID
-	tenantInfo, err := r.Client.TenantApi.GetTenant(ctx)
+	tenantInfo, err := r.Client.GetTenant(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Retrieve Tenant Information",
@@ -179,7 +178,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	// Create the policy
-	policy, err := r.Client.createOrUpdateTenantIsolationPolicy(ctx, tenantInfo.TenantId, *policyDto)
+	policy, err := r.Client.CreateOrUpdateTenantIsolationPolicy(ctx, tenantInfo.TenantId, *policyDto)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Tenant Isolation Policy",
@@ -231,7 +230,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	// Get the current policy
-	policy, err := r.Client.getTenantIsolationPolicy(ctx, tenantId)
+	policy, err := r.Client.GetTenantIsolationPolicy(ctx, tenantId)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Tenant Isolation Policy",
@@ -303,7 +302,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Update the policy
-	updatedPolicy, err := r.Client.createOrUpdateTenantIsolationPolicy(ctx, tenantId, *policyDto)
+	updatedPolicy, err := r.Client.CreateOrUpdateTenantIsolationPolicy(ctx, tenantId, *policyDto)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Tenant Isolation Policy",
@@ -352,15 +351,15 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 
 	// To delete the policy, we update it with an empty policy
-	emptyPolicy := TenantIsolationPolicyDto{
-		Properties: TenantIsolationPolicyPropertiesDto{
+	emptyPolicy := bapi.TenantIsolationPolicyDto{
+		Properties: bapi.TenantIsolationPolicyPropertiesDto{
 			TenantId:       tenantId,
 			IsDisabled:     types.BoolValue(true).ValueBoolPointer(),
-			AllowedTenants: []AllowedTenantDto{},
+			AllowedTenants: []bapi.AllowedTenantDto{},
 		},
 	}
 
-	_, err := r.Client.createOrUpdateTenantIsolationPolicy(ctx, tenantId, emptyPolicy)
+	_, err := r.Client.CreateOrUpdateTenantIsolationPolicy(ctx, tenantId, emptyPolicy)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Delete Tenant Isolation Policy",
@@ -384,7 +383,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	tenantId := req.ID
 	if tenantId == "" {
 		// Get the current tenant ID if not provided
-		tenantInfo, err := r.Client.TenantApi.GetTenant(ctx)
+		tenantInfo, err := r.Client.GetTenant(ctx)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to Retrieve Tenant Information for Import",
