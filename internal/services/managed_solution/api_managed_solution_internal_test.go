@@ -91,7 +91,7 @@ func TestUnitApplyManagedSolution_UsesStageAndUpgradeForUpdates(t *testing.T) {
 	httpmock.RegisterNoResponder(func(req *http.Request) (*http.Response, error) {
 		return nil, fmt.Errorf("no responder found for %s %s", req.Method, req.URL)
 	})
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, `{
   "id":"00000000-0000-0000-0000-000000000001",
@@ -210,7 +210,7 @@ func TestUnitPublishAllCustomizations_UsesDataversePublishAllXml(t *testing.T) {
 
 func registerManagedSolutionApiEnvironment(t *testing.T) {
 	t.Helper()
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, `{
   "id":"00000000-0000-0000-0000-000000000001",
