@@ -6,7 +6,6 @@ package managedsolution
 import (
 	"archive/zip"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
@@ -31,14 +31,16 @@ import (
 
 func NewManagedSolutionClient(apiClient *api.Client) Client {
 	return Client{
-		Client:         ppapi.NewClient(apiClient),
-		SolutionClient: solution.NewSolutionClient(apiClient),
+		Client:          ppapi.NewClient(apiClient),
+		DataverseClient: dataverse.NewClient(apiClient),
+		SolutionClient:  solution.NewSolutionClient(apiClient),
 	}
 }
 
 type Client struct {
 	*ppapi.Client
-	SolutionClient solution.Client
+	DataverseClient *dataverse.Client
+	SolutionClient  solution.Client
 }
 
 func (client *Client) DataverseExists(ctx context.Context, environmentId string) (bool, error) {
@@ -92,119 +94,36 @@ func (client *Client) DeleteSolution(ctx context.Context, environmentId, solutio
 	return client.SolutionClient.DeleteSolution(ctx, environmentId, solutionId)
 }
 
-// importOperation selects the Dataverse import API used to realize the managed solution:
-// initial installation or in-place staged upgrade of an existing managed install.
-type importOperation string
-
-const (
-	importOperationInstall         importOperation = "ImportSolutionAsync"
-	importOperationStageAndUpgrade importOperation = "StageAndUpgradeAsync"
-)
-
-func (client *Client) ApplyManagedSolution(ctx context.Context, environmentId string, content []byte, componentParameters []any, operation importOperation, skipProductUpdateDependencies bool) (*solution.SolutionDto, error) {
+// ApplyManagedSolution realizes the configured managed solution in the target
+// environment: it resolves the environment's Dataverse host, then composes the
+// staged import operations of the Dataverse client — stage the package, start
+// the import, wait for the async operation, validate the import job result —
+// and reads back the imported solution.
+func (client *Client) ApplyManagedSolution(ctx context.Context, environmentId string, content []byte, componentParameters []any, operation dataverse.StagedImportOperation, skipProductUpdateDependencies bool) (*solution.SolutionDto, error) {
 	environmentHost, err := client.SolutionClient.GetEnvironmentHostById(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
 
-	if content == nil {
-		return nil, errors.New("solution content is nil")
-	}
-
-	stageRequestBody := stageSolutionImportDto{
-		CustomizationFile: base64.StdEncoding.EncodeToString(content),
-	}
-
-	stageURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   "/api/data/v9.2/StageSolution",
-	}
-
-	stageResponse := stageSolutionImportResponseDto{}
-	resp, err := client.Api.Execute(ctx, nil, "POST", stageURL.String(), nil, stageRequestBody, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &stageResponse)
+	stageResponse, err := client.DataverseClient.StageSolution(ctx, environmentHost, content)
 	if err != nil {
 		return nil, err
 	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return nil, err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return nil, err
-	}
 
-	if stageResponse.StageSolutionResults.StageSolutionStatus != "Passed" {
-		e := fmt.Errorf("solution failed with status: '%s'", stageResponse.StageSolutionResults.StageSolutionStatus)
-		for _, missingDependency := range stageResponse.StageSolutionResults.MissingDependencies {
-			e = errors.Join(fmt.Errorf("missing dependency: '%s'", missingDependency.RequiredComponentSchemaName), e)
-		}
-		for _, validation := range stageResponse.StageSolutionResults.SolutionValidationResults {
-			e = errors.Join(fmt.Errorf("solution validation failed: %s", validation.Message), e)
-		}
-		return nil, e
-	}
-
-	importRequestBody := importSolutionDto{
-		PublishWorkflows:                 true,
-		OverwriteUnmanagedCustomizations: true,
-		SkipProductUpdateDependencies:    skipProductUpdateDependencies,
-		ComponentParameters:              componentParameters,
-		SolutionParameters: importSolutionParametersDto{
-			StageSolutionUploadId: stageResponse.StageSolutionResults.StageSolutionUploadId,
-		},
-	}
-
-	importURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   "/api/data/v9.2/" + string(operation),
-	}
-	importResponse := importSolutionResponseDto{}
-	resp, err = client.Api.ExecuteWithoutRetry(ctx, nil, "POST", importURL.String(), nil, importRequestBody, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &importResponse)
+	importResponse, err := client.DataverseClient.StartStagedSolutionImport(ctx, environmentHost, operation, stageResponse.StageSolutionResults.StageSolutionUploadId, componentParameters, skipProductUpdateDependencies)
 	if err != nil {
 		return nil, err
 	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return nil, err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return nil, err
-	}
 
-	if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
+	if err := client.DataverseClient.AwaitStagedSolutionImport(ctx, environmentHost, importResponse.AsyncOperationId); err != nil {
 		return nil, err
 	}
 
-	pollURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   fmt.Sprintf("/api/data/v9.2/asyncoperations(%s)", importResponse.AsyncOperationId),
+	if err := client.DataverseClient.ValidateStagedSolutionImportResult(ctx, environmentHost, importResponse.ImportJobKey); err != nil {
+		return nil, err
 	}
 
-	for {
-		asyncResponse := asyncSolutionPullResponseDto{}
-		resp, err = client.Api.Execute(ctx, nil, "GET", pollURL.String(), nil, nil, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &asyncResponse)
-		if err != nil {
-			return nil, err
-		}
-		if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-			return nil, err
-		}
-		if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-			return nil, err
-		}
-
-		if asyncResponse.CompletedOn != "" {
-			if err := client.validateSolutionImportResult(ctx, environmentHost, importResponse.ImportJobKey); err != nil {
-				return nil, err
-			}
-			return client.SolutionClient.GetSolutionUniqueName(ctx, environmentId, stageResponse.StageSolutionResults.SolutionDetails.SolutionUniqueName)
-		}
-
-		if err := client.Api.SleepWithContext(ctx, api.DefaultRetryAfter()); err != nil {
-			return nil, err
-		}
-	}
+	return client.SolutionClient.GetSolutionUniqueName(ctx, environmentId, stageResponse.StageSolutionResults.SolutionDetails.SolutionUniqueName)
 }
 
 func (client *Client) PublishAllCustomizations(ctx context.Context, environmentId string) error {
@@ -213,47 +132,7 @@ func (client *Client) PublishAllCustomizations(ctx context.Context, environmentI
 		return err
 	}
 
-	publishURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   "/api/data/v9.2/PublishAllXml",
-	}
-	resp, err := client.Api.Execute(ctx, nil, "POST", publishURL.String(), nil, struct{}{}, []int{http.StatusOK, http.StatusNoContent, http.StatusForbidden, http.StatusNotFound}, nil)
-	if err != nil {
-		return err
-	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return err
-	}
-	return client.Api.HandleNotFoundResponse(resp)
-}
-
-func (client *Client) validateSolutionImportResult(ctx context.Context, environmentHost, importJobKey string) error {
-	apiURL := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   environmentHost,
-		Path:   fmt.Sprintf("/api/data/v9.0/RetrieveSolutionImportResult(ImportJobId=%s)", importJobKey),
-	}
-
-	response := validateSolutionImportResponseDto{}
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiURL.String(), nil, nil, []int{http.StatusOK, http.StatusForbidden, http.StatusNotFound}, &response)
-	if err != nil {
-		return err
-	}
-	if err := client.Api.HandleForbiddenResponse(resp); err != nil {
-		return err
-	}
-	if err := client.Api.HandleNotFoundResponse(resp); err != nil {
-		return err
-	}
-	if response.SolutionOperationResult.Status != "Passed" {
-		messages := make([]string, 0, len(response.SolutionOperationResult.ErrorMessages))
-		for _, message := range response.SolutionOperationResult.ErrorMessages {
-			messages = append(messages, fmt.Sprint(message))
-		}
-		return fmt.Errorf("solution import failed: %s", strings.Join(messages, "; "))
-	}
-	return nil
+	return client.DataverseClient.PublishAllCustomizations(ctx, environmentHost)
 }
 
 func (client *Client) GetUnmanagedEnvironmentVariableDefinitions(ctx context.Context, environmentId string, schemaNames []string) (map[string]bool, error) {
@@ -586,7 +465,7 @@ func buildConnectionParameters(packageRefs map[string]packageConnectionReference
 			return nil, fmt.Errorf("connection reference %q expects connector %q but connection %q resolves to %q", logicalName, packageRef.ConnectorID, connectionID, connection.Properties.ApiId)
 		}
 
-		parameters = append(parameters, importSolutionConnectionReferenceDto{
+		parameters = append(parameters, dataverse.StagedImportConnectionReferenceDto{
 			Type:                           "Microsoft.Dynamics.CRM.connectionreference",
 			ConnectionReferenceLogicalName: logicalName,
 			ConnectionReferenceDisplayName: "",
