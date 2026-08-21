@@ -43,20 +43,6 @@ type userArrayDto struct {
 	Value []userDto `json:"value"`
 }
 
-type environmentIdDto struct {
-	Id         string                     `json:"id"`
-	Name       string                     `json:"name"`
-	Properties environmentIdPropertiesDto `json:"properties"`
-}
-
-type environmentIdPropertiesDto struct {
-	LinkedEnvironmentMetadata linkedEnvironmentIdMetadataDto `json:"linkedEnvironmentMetadata"`
-}
-
-type linkedEnvironmentIdMetadataDto struct {
-	InstanceURL string
-}
-
 type RoleDefinitionDto struct {
 	Id   string `json:"id"`
 	Type string `json:"type,omitempty"`

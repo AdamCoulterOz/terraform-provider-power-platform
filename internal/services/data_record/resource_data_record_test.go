@@ -139,7 +139,7 @@ func TestUnitDataRecordResource_Validate_Create(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Create/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
@@ -398,7 +398,7 @@ func TestUnitDataRecordResource_Validate_Update(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Update/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
@@ -617,7 +617,7 @@ func TestUnitDataRecordResource_Validate_Delete_Relationships(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Delete/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
@@ -1050,7 +1050,7 @@ func TestUnitDataRecordResource_Validate_Update_Relationships(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Update_Relationships/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
@@ -1400,7 +1400,7 @@ func TestUnitDataRecordResource_Validate_Disable_On_Delete(t *testing.T) {
 	var contactDisabledExecuted bool
 	var businessUnitDisabledExecuted bool
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Disable_On_Delete/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
@@ -1609,22 +1609,16 @@ func TestUnitDataRecordResource_Validate_Read_ParentDeleted(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	var getEnvironmentCallCount = 0
-	// The data_record client's internal getEnvironment() (exact URL with api-version only).
+	// Every environment lookup (the data_record client's promoted *bapi.Client.GetEnvironment and
+	// the tier-2 parent check) uses the same canonical URL with $expand query params.
 	// Step 1 (Create + Reads) makes ~5 calls that succeed; step 2 refresh returns 404
 	// to simulate the environment being deleted out-of-band.
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			getEnvironmentCallCount++
 			if getEnvironmentCallCount <= 5 {
 				return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Create/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 			}
-			return httpmock.NewStringResponse(http.StatusNotFound, httpmock.File("tests/resource/Validate_Read_ParentDeleted/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
-		})
-
-	// The EnvironmentClient's GetEnvironment() returns 404 (URL includes $expand query params).
-	// This is only called during tier-2 parent check when the data record read fails.
-	httpmock.RegisterResponder("GET", `=~^https://api\.bap\.microsoft\.com/providers/Microsoft\.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001\?.+expand`,
-		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusNotFound, httpmock.File("tests/resource/Validate_Read_ParentDeleted/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})
 
@@ -1677,7 +1671,7 @@ func TestUnitDataRecordResource_Validate_Read_ParentDeleted(t *testing.T) {
 			},
 			{
 				// Step 2: refresh when the parent environment has been deleted out-of-band.
-				// The GetDataRecord call fails because getEnvironment returns 404; the provider detects the parent is gone and removes the resource from state.
+				// The GetDataRecord call fails because GetEnvironment returns 404; the provider detects the parent is gone and removes the resource from state.
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
@@ -1689,7 +1683,7 @@ func TestUnitDataRecordResource_Validate_Import(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/Validate_Import/get_environment_00000000-0000-0000-0000-000000000001.json").String()), nil
 		})

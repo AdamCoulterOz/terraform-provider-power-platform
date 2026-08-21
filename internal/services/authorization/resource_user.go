@@ -255,7 +255,7 @@ func (r *UserResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			return
 		}
 		// For ambiguous errors, check whether the parent environment still exists.
-		_, envErr := r.UserClient.environmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+		_, envErr := r.UserClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 		if errors.Is(envErr, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
@@ -274,7 +274,7 @@ func (r *UserResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				return
 			}
 			// For ambiguous errors, check whether the parent environment still exists.
-			_, envErr := r.UserClient.environmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+			_, envErr := r.UserClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 			if errors.Is(envErr, customerrors.ErrObjectNotFound) {
 				resp.State.RemoveResource(ctx)
 				return
@@ -291,7 +291,7 @@ func (r *UserResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				return
 			}
 			// For ambiguous errors, check whether the parent environment still exists.
-			_, envErr := r.UserClient.environmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+			_, envErr := r.UserClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 			if errors.Is(envErr, customerrors.ErrObjectNotFound) {
 				resp.State.RemoveResource(ctx)
 				return

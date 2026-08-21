@@ -14,18 +14,18 @@ import (
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 )
 
 func newDataRecordClient(apiClient *api.Client) client {
 	return client{
-		Api: apiClient,
+		Client: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
-	Api *api.Client
+	*bapi.Client
 }
 
 func getEntityDefinition(ctx context.Context, client *client, environmentId, entityLogicalName string) (*entityDefinitionsDto, error) {
@@ -54,47 +54,6 @@ func getEntityDefinition(ctx context.Context, client *client, environmentId, ent
 	}
 
 	return &entityDefinition, nil
-}
-
-func (client *client) GetEnvironmentHostById(ctx context.Context, environmentId string) (string, error) {
-	env, err := client.getEnvironment(ctx, environmentId)
-	if err != nil {
-		return "", err
-	}
-	environmentUrl := strings.TrimSuffix(env.Properties.LinkedEnvironmentMetadata.InstanceURL, "/")
-	if environmentUrl == "" {
-		return "", customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_URL_NOT_FOUND), "environment url not found, please check if the environment has dataverse linked")
-	}
-
-	envUrl, err := url.Parse(environmentUrl)
-	if err != nil {
-		return "", err
-	}
-	return envUrl.Host, nil
-}
-
-func (client *client) getEnvironment(ctx context.Context, environmentId string) (*environmentIdDto, error) {
-	// Without an id the request degrades into a "list environments" call that returns HTTP 200 with a collection body.
-	if environmentId == "" {
-		return nil, errors.New("environment id must not be empty")
-	}
-
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
-	}
-	values := url.Values{}
-	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
-	apiUrl.RawQuery = values.Encode()
-
-	env := environmentIdDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get environment %s: %w", environmentId, err)
-	}
-
-	return &env, nil
 }
 
 func (client *client) GetDataRecordsByODataQuery(ctx context.Context, environmentId, query string, headers map[string]string) (*ODataQueryResponse, error) {

@@ -8,29 +8,29 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 )
 
 func newEnvironmentSettingsClient(apiClient *api.Client) client {
 	return client{
-		Api: apiClient,
+		Client: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
-	Api *api.Client
+	*bapi.Client
 }
 
 func (client *client) DataverseExists(ctx context.Context, environmentId string) (bool, error) {
-	env, err := client.getEnvironment(ctx, environmentId)
+	env, err := client.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		return false, err
 	}
-	return env.Properties.LinkedEnvironmentMetadata.InstanceURL != "", nil
+	return env.Properties.LinkedEnvironmentMetadata != nil && env.Properties.LinkedEnvironmentMetadata.InstanceURL != "", nil
 }
 
 func (client *client) GetEnvironmentSettings(ctx context.Context, environmentId string) (*environmentSettings, error) {
@@ -188,43 +188,4 @@ func (client *client) updateEnvironmentBackendSettings(ctx context.Context, envi
 		}
 	}
 	return client.getEnvironmentBackendSettings(ctx, environmentId)
-}
-
-func (client *client) GetEnvironmentHostById(ctx context.Context, environmentId string) (string, error) {
-	env, err := client.getEnvironment(ctx, environmentId)
-	if err != nil {
-		return "", err
-	}
-	environmentUrl := strings.TrimSuffix(env.Properties.LinkedEnvironmentMetadata.InstanceURL, "/")
-	if environmentUrl == "" {
-		return "", customerrors.WrapIntoProviderError(nil, customerrors.ErrorCode(constants.ERROR_ENVIRONMENT_URL_NOT_FOUND), "environment url not found, please check if the environment has dataverse linked")
-	}
-
-	envUrl, err := url.Parse(environmentUrl)
-	if err != nil {
-		return "", err
-	}
-	return envUrl.Host, nil
-}
-
-func (client *client) getEnvironment(ctx context.Context, environmentId string) (*environmentIdDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
-	}
-	values := url.Values{}
-	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
-	apiUrl.RawQuery = values.Encode()
-
-	env := environmentIdDto{}
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK, http.StatusNotFound}, &env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute API request for environment %s: %w", environmentId, err)
-	}
-	if resp != nil && resp.HttpResponse.StatusCode == http.StatusNotFound {
-		return nil, customerrors.WrapIntoProviderError(err, customerrors.ErrorCode(constants.ERROR_OBJECT_NOT_FOUND), fmt.Sprintf("environment '%s' not found", environmentId))
-	}
-
-	return &env, nil
 }
