@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
-	"github.com/microsoft/terraform-provider-power-platform/internal/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/config"
 	"github.com/stretchr/testify/require"
 )

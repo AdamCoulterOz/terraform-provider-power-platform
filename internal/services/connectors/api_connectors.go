@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/microsoft/terraform-provider-power-platform/internal/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
