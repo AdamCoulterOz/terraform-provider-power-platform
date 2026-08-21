@@ -283,11 +283,11 @@ func TestUnitEnvironmentApplicationAdminResource_Read_ParentDeleted(t *testing.T
 	defer httpmock.DeactivateAndReset()
 
 	var getEnvironmentCallCount = 0
-	// The application client's getEnvironment() (exact URL with api-version only).
-	// Step 1 (Create + Reads) makes 5 calls that succeed; call 6 (step 2 RefreshState)
-	// returns 404 to simulate the environment being deleted out-of-band.
+	// The application client's environment lookups (canonical bapi GetEnvironment, exact URL
+	// with the $expand query). Step 1 (Create + Reads) makes 5 calls that succeed; call 6
+	// (step 2 RefreshState) returns 404 to simulate the environment being deleted out-of-band.
 	// Calls 7+ succeed again to allow orderly post-test cleanup.
-	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?api-version=2023-06-01`,
+	httpmock.RegisterResponder("GET", `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01`,
 		func(req *http.Request) (*http.Response, error) {
 			getEnvironmentCallCount++
 			if getEnvironmentCallCount == 6 {
@@ -296,8 +296,8 @@ func TestUnitEnvironmentApplicationAdminResource_Read_ParentDeleted(t *testing.T
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resource/application_admin/Create/get_environment.json").String()), nil
 		})
 
-	// The EnvironmentClient's GetEnvironment() returns 404 (URL includes $expand query params).
-	// This is only called during tier-2 parent check when the application user read fails.
+	// Safety net for any other $expand environment read (e.g. the EnvironmentClient's tier-2
+	// parent check when the application user read fails): return 404.
 	httpmock.RegisterResponder("GET", `=~^https://api\.bap\.microsoft\.com/providers/Microsoft\.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001\?.+expand`,
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusNotFound, httpmock.File("tests/resource/application_admin/Read_ParentDeleted/get_environment.json").String()), nil
@@ -354,7 +354,7 @@ func TestUnitEnvironmentApplicationAdminResource_Read_ParentDeleted(t *testing.T
 			},
 			{
 				// Step 2: refresh when the parent environment has been deleted out-of-band.
-				// The ApplicationUserExists call fails because getEnvironment returns 404;
+				// The ApplicationUserExists call fails because the environment lookup returns 404;
 				// the provider detects the parent is gone and removes the resource from state.
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
