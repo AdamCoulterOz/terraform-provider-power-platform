@@ -197,7 +197,7 @@ func (r *ManagedEnvironmentResource) Create(ctx context.Context, req resource.Cr
 
 	managedEnvironmentDto := r.buildManagedEnvironmentDto(plan, solutionCheckerRuleOverrides)
 
-	envPreCheck, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	envPreCheck, err := r.ManagedEnvironmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
 		return
@@ -216,7 +216,7 @@ func (r *ManagedEnvironmentResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	env, err := r.ManagedEnvironmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
 		return
@@ -241,7 +241,7 @@ func (r *ManagedEnvironmentResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+	env, err := r.ManagedEnvironmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)
@@ -285,7 +285,7 @@ func (r *ManagedEnvironmentResource) Update(ctx context.Context, req resource.Up
 
 	managedEnvironmentDto := r.buildManagedEnvironmentDto(plan, solutionCheckerRuleOverrides)
 
-	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	env, err := r.ManagedEnvironmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
 		return
@@ -307,7 +307,7 @@ func (r *ManagedEnvironmentResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	env, err = r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
+	env, err = r.ManagedEnvironmentClient.GetEnvironment(ctx, plan.EnvironmentId.ValueString())
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)
@@ -335,7 +335,7 @@ func (r *ManagedEnvironmentResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	env, err := r.ManagedEnvironmentClient.environmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
+	env, err := r.ManagedEnvironmentClient.GetEnvironment(ctx, state.EnvironmentId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment %s", r.FullTypeName()), err.Error())
 		return
