@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 	"github.com/microsoft/terraform-provider-power-platform/internal/modifiers"
@@ -209,7 +210,7 @@ func (r *UserResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 }
 
-func (r *UserResource) resolveApplicationUserForCreate(ctx context.Context, plan *UserResourceModel) (*applicationUserDto, bool, error) {
+func (r *UserResource) resolveApplicationUserForCreate(ctx context.Context, plan *UserResourceModel) (*dataverse.ApplicationUserDto, bool, error) {
 	environmentID := plan.EnvironmentId.ValueString()
 	applicationID := plan.ApplicationId.ValueString()
 	existing, err := r.ApplicationClient.GetApplicationUser(ctx, environmentID, applicationID)

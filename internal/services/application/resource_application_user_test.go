@@ -760,7 +760,7 @@ func TestUnitApplicationUserResource_Validate_Read_ParentDeleted(t *testing.T) {
 	environmentDeleted := false
 	userCreated := false
 
-	// The application client's getEnvironment(). Once the parent environment has been
+	// The application client's environment lookup. Once the parent environment has been
 	// deleted out-of-band (step 2), it returns 404 so an ErrObjectNotFound surfaces.
 	httpmock.RegisterResponder("GET", `=~^https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001`,
 		func(req *http.Request) (*http.Response, error) {
@@ -823,7 +823,7 @@ func TestUnitApplicationUserResource_Validate_Read_ParentDeleted(t *testing.T) {
 			},
 			{
 				// Step 2: refresh when the parent environment has been deleted out-of-band.
-				// getEnvironment returns 404 -> ErrObjectNotFound -> the resource is removed
+				// The environment lookup returns 404 -> ErrObjectNotFound -> the resource is removed
 				// from state instead of failing the refresh; the follow-up plan recreates it.
 				PreConfig:          func() { environmentDeleted = true },
 				RefreshState:       true,

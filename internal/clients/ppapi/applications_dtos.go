@@ -1,14 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-package application
 
-type tenantApplicationDto struct {
+package ppapi
+
+// TenantApplicationDto is a tenant-level Dynamics 365 application package.
+type TenantApplicationDto struct {
 	ApplicationDescription string                            `json:"applicationDescription"`
 	ApplicationId          string                            `json:"applicationId"`
 	ApplicationName        string                            `json:"applicationName"`
 	ApplicationVisibility  string                            `json:"applicationVisibility"`
 	CatalogVisibility      string                            `json:"catalogVisibility"`
-	LastError              *tenantApplicationErrorDetailsDto `json:"errorDetails,omitempty"`
+	LastError              *TenantApplicationErrorDetailsDto `json:"errorDetails,omitempty"`
 	LearnMoreUrl           string                            `json:"learnMoreUrl"`
 	LocalizedDescription   string                            `json:"localizedDescription"`
 	LocalizedName          string                            `json:"localizedName"`
@@ -17,7 +19,9 @@ type tenantApplicationDto struct {
 	UniqueName             string                            `json:"uniqueName"`
 }
 
-type tenantApplicationErrorDetailsDto struct {
+// TenantApplicationErrorDetailsDto describes the last error reported for a
+// tenant application package.
+type TenantApplicationErrorDetailsDto struct {
 	ErrorCode  string `json:"errorCode"`
 	ErrorName  string `json:"errorName"`
 	Message    string `json:"message"`
@@ -26,15 +30,20 @@ type tenantApplicationErrorDetailsDto struct {
 	Type       string `json:"type"`
 }
 
-type tenantApplicationArrayDto struct {
-	Value []tenantApplicationDto `json:"value"`
+// TenantApplicationArrayDto is the envelope for a tenant application packages
+// listing.
+type TenantApplicationArrayDto struct {
+	Value []TenantApplicationDto `json:"value"`
 }
 
-type environmentApplicationArrayDto struct {
-	Value []environmentApplicationDto `json:"value"`
+// EnvironmentApplicationArrayDto is the envelope for an environment
+// application packages listing.
+type EnvironmentApplicationArrayDto struct {
+	Value []EnvironmentApplicationDto `json:"value"`
 }
 
-type environmentApplicationDto struct {
+// EnvironmentApplicationDto is an application package in an environment.
+type EnvironmentApplicationDto struct {
 	ApplicationId         string `json:"applicationId"`
 	Name                  string `json:"applicationName"`
 	UniqueName            string `json:"uniqueName"`
@@ -47,76 +56,37 @@ type environmentApplicationDto struct {
 	ApplicationVisibility string `json:"applicationVisibility"`
 }
 
-type environmentApplicationLifecycleCreatedDto struct {
+// EnvironmentApplicationLifecycleCreatedDto is the synchronous creation
+// response body of an application package install.
+type EnvironmentApplicationLifecycleCreatedDto struct {
 	Name       string                                              `json:"name"`
-	Properties environmentApplicationLifecycleCreatedPropertiesDto `json:"properties"`
+	Properties EnvironmentApplicationLifecycleCreatedPropertiesDto `json:"properties"`
 }
 
-type environmentApplicationLifecycleCreatedPropertiesDto struct {
+// EnvironmentApplicationLifecycleCreatedPropertiesDto carries the provisioning
+// state of a synchronously created application package install.
+type EnvironmentApplicationLifecycleCreatedPropertiesDto struct {
 	ProvisioningState string `json:"provisioningState"`
 }
 
-type environmentApplicationLifecycleDto struct {
+// EnvironmentApplicationLifecycleDto is the polled state of an application
+// package install operation.
+type EnvironmentApplicationLifecycleDto struct {
 	OperationId        string                                  `json:"operationId"`
 	CreatedDateTime    string                                  `json:"createdDateTime"`
 	LastActionDateTime string                                  `json:"lastActionDateTime"`
 	Status             string                                  `json:"status"`
 	StatusMessage      string                                  `json:"statusMessage"`
-	Error              environmentApplicationLifecycleErrorDto `json:"error"`
+	Error              EnvironmentApplicationLifecycleErrorDto `json:"error"`
 }
 
-type environmentApplicationLifecycleErrorDto struct {
+// EnvironmentApplicationLifecycleErrorDto describes a failed application
+// package install operation.
+type EnvironmentApplicationLifecycleErrorDto struct {
 	ErrorName  string `json:"errorName"`
 	ErrorCode  int    `json:"errorCode"`
 	Message    string `json:"message"`
 	Type       string `json:"type"`
 	StatusCode int    `json:"statusCode"`
 	Source     string `json:"source"`
-}
-
-type environmentIdDto struct {
-	Id         string                     `json:"id"`
-	Name       string                     `json:"name"`
-	Properties environmentIdPropertiesDto `json:"properties"`
-}
-
-type environmentIdPropertiesDto struct {
-	LinkedEnvironmentMetadata linkedEnvironmentIdMetadataDto `json:"linkedEnvironmentMetadata"`
-}
-
-type linkedEnvironmentIdMetadataDto struct {
-	InstanceURL string
-}
-
-type applicationUsersResponseDto struct {
-	Value []applicationUserDto `json:"value"`
-}
-
-type applicationUserDto struct {
-	FullName       string                       `json:"fullname"`
-	ApplicationId  string                       `json:"applicationid"`
-	SystemUserId   string                       `json:"systemuserid"`
-	BusinessUnitId string                       `json:"_businessunitid_value"`
-	IsDisabled     bool                         `json:"isdisabled"`
-	DeletedState   int64                        `json:"deletedstate"`
-	SecurityRoles  []applicationSecurityRoleDto `json:"systemuserroles_association,omitempty"`
-}
-
-type applicationSecurityRoleDto struct {
-	RoleId         string `json:"roleid"`
-	Name           string `json:"name"`
-	BusinessUnitId string `json:"_businessunitid_value"`
-}
-
-type applicationSecurityRoleArrayDto struct {
-	Value []applicationSecurityRoleDto `json:"value"`
-}
-
-type applicationBusinessUnitArrayDto struct {
-	Value []applicationBusinessUnitDto `json:"value"`
-}
-
-type applicationBusinessUnitDto struct {
-	BusinessUnitId string `json:"businessunitid"`
-	Name           string `json:"name"`
 }

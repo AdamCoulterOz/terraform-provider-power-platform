@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -310,8 +311,8 @@ func (r *RoleAssignmentResource) ImportState(ctx context.Context, req resource.I
 }
 
 type resolvedRoleAssignment struct {
-	principal      *applicationUserDto
-	role           applicationSecurityRoleDto
+	principal      *dataverse.ApplicationUserDto
+	role           dataverse.ApplicationSecurityRoleDto
 	businessUnitID string
 }
 
@@ -349,7 +350,7 @@ func (r *RoleAssignmentResource) resolveRequestedRole(ctx context.Context, envir
 	}, nil
 }
 
-func principalHasRole(principal *applicationUserDto, roleID string) bool {
+func principalHasRole(principal *dataverse.ApplicationUserDto, roleID string) bool {
 	for _, role := range principal.SecurityRoles {
 		if role.RoleId == roleID {
 			return true
