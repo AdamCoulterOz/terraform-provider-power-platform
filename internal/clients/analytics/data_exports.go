@@ -13,7 +13,7 @@ import (
 
 // GetAnalyticsDataExport lists the analytics data export connections of the
 // tenant in the given gateway cluster region.
-func (client *Client) GetAnalyticsDataExport(ctx context.Context, region string) ([]AnalyticsDataDto, error) {
+func (client *Client) GetAnalyticsDataExport(ctx context.Context, region string) ([]DataDto, error) {
 	// Get the analytics URL based on the region
 	analyticsUrl, err := getAnalyticsUrl(region)
 	if err != nil {
@@ -26,7 +26,7 @@ func (client *Client) GetAnalyticsDataExport(ctx context.Context, region string)
 	}
 	apiUrl.Path = "api/v2/connections"
 
-	var adr AnalyticsDataResponse
+	var adr DataResponse
 	_, err = client.Api.Execute(ctx, client.scopes(), "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &adr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get analytics data export: %w", err)

@@ -44,8 +44,8 @@ type SinkModel struct {
 	Key               types.String `tfsdk:"key"`
 }
 
-// convertDtoToModel converts an AnalyticsDataDto to AnalyticsDataModel.
-func convertDtoToModel(dto *analytics.AnalyticsDataDto) *AnalyticsDataModel {
+// convertDtoToModel converts an DataDto to AnalyticsDataModel.
+func convertDtoToModel(dto *analytics.DataDto) *AnalyticsDataModel {
 	if dto == nil {
 		return nil
 	}

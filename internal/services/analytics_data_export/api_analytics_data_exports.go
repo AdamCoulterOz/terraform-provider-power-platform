@@ -38,7 +38,7 @@ func (client *Client) GetGatewayCluster(ctx context.Context) (*ppapi.GatewayClus
 	return client.GatewayApi.GetGatewayCluster(ctx, tenantInfo.TenantId)
 }
 
-func (client *Client) GetAnalyticsDataExport(ctx context.Context) ([]analytics.AnalyticsDataDto, error) {
+func (client *Client) GetAnalyticsDataExport(ctx context.Context) ([]analytics.DataDto, error) {
 	// Get the gateway cluster
 	gatewayCluster, err := client.GetGatewayCluster(ctx)
 	if err != nil {

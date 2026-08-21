@@ -3,11 +3,11 @@
 
 package analytics
 
-type AnalyticsDataResponse struct {
-	Value []AnalyticsDataDto `json:"value"`
+type DataResponse struct {
+	Value []DataDto `json:"value"`
 }
 
-type AnalyticsDataDto struct {
+type DataDto struct {
 	ID               string           `json:"id"`
 	Source           string           `json:"source"`
 	Environments     []EnvironmentDto `json:"environments"`
@@ -26,7 +26,7 @@ type StatusDto struct {
 	Message   *string `json:"message"`
 }
 
-type AnalyticsDataCreateDto struct {
+type DataCreateDto struct {
 	Source           string           `json:"source"`
 	Environments     []EnvironmentDto `json:"environments"`
 	Sink             SinkDto          `json:"sink"`

@@ -1,3 +1,0 @@
-kind: changed
-body: Extract all API transport, wire DTOs and request logic into dedicated per-boundary client libraries under internal/clients (bapi, ppapi, dataverse, powerapps, athena, analytics, advisor, copilot), consolidating duplicated environment and tenant lookups onto canonical clients (no behavior change)
-time: 2026-08-21T00:00:02Z
