@@ -10,11 +10,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 )
 
 func TestUnitAddressModelFromDto_IgnoresEmptySlotWithOnlyAddressID(t *testing.T) {
-	dto := &publisherDto{
+	dto := &dataverse.PublisherDto{
 		Address2AddressId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
 	}
 
@@ -25,7 +26,7 @@ func TestUnitAddressModelFromDto_IgnoresEmptySlotWithOnlyAddressID(t *testing.T)
 }
 
 func TestUnitAddressModelsFromDto_IgnoresPlaceholderSlotWithoutExistingState(t *testing.T) {
-	dto := &publisherDto{
+	dto := &dataverse.PublisherDto{
 		Address1AddressId:          "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		Address1AddressTypeCode:    int64Pointer(1),
 		Address1ShippingMethodCode: int64Pointer(1),
@@ -38,7 +39,7 @@ func TestUnitAddressModelsFromDto_IgnoresPlaceholderSlotWithoutExistingState(t *
 }
 
 func TestUnitAddressModelsFromDto_PreservesPlaceholderSlotWhenAlreadyTracked(t *testing.T) {
-	dto := &publisherDto{
+	dto := &dataverse.PublisherDto{
 		Address1AddressId:          "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		Address1AddressTypeCode:    int64Pointer(1),
 		Address1ShippingMethodCode: int64Pointer(1),
@@ -68,7 +69,7 @@ func TestUnitSetResourceModelFromDto_PreservesExplicitEmptyTopLevelStrings(t *te
 		SupportingWebsiteURL: types.StringValue(""),
 	}
 
-	setResourceModelFromDto(&model, "00000000-0000-0000-0000-000000000001", &publisherDto{
+	setResourceModelFromDto(&model, "00000000-0000-0000-0000-000000000001", &dataverse.PublisherDto{
 		Id:                             "11111111-1111-1111-1111-111111111111",
 		UniqueName:                     "testpublisher",
 		FriendlyName:                   "Test Publisher",
@@ -92,7 +93,7 @@ func TestUnitSetResourceModelFromDto_PreservesCaseOnlyFriendlyNameDifferences(t 
 		FriendlyName: types.StringValue("MetaForm"),
 	}
 
-	setResourceModelFromDto(&model, "00000000-0000-0000-0000-000000000001", &publisherDto{
+	setResourceModelFromDto(&model, "00000000-0000-0000-0000-000000000001", &dataverse.PublisherDto{
 		Id:                             "11111111-1111-1111-1111-111111111111",
 		UniqueName:                     "metaform",
 		FriendlyName:                   "Metaform",
@@ -106,7 +107,7 @@ func TestUnitSetResourceModelFromDto_PreservesCaseOnlyFriendlyNameDifferences(t 
 }
 
 func TestUnitAddressModelsFromDto_PreservesExplicitEmptyAddressList(t *testing.T) {
-	models := addressModelsFromDto(&publisherDto{}, []AddressModel{})
+	models := addressModelsFromDto(&dataverse.PublisherDto{}, []AddressModel{})
 	if models == nil {
 		t.Fatal("expected explicit empty address list to be preserved")
 	}
@@ -116,7 +117,7 @@ func TestUnitAddressModelsFromDto_PreservesExplicitEmptyAddressList(t *testing.T
 }
 
 func TestUnitAddressModelsFromDto_PreservesTrackedEmptyStringAddressFields(t *testing.T) {
-	dto := &publisherDto{
+	dto := &dataverse.PublisherDto{
 		Address1AddressId:          "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		Address1AddressTypeCode:    int64Pointer(1),
 		Address1ShippingMethodCode: int64Pointer(1),
@@ -234,7 +235,7 @@ func TestUnitGetPublisherIdFromResponse_ParsesCanonicalGuid(t *testing.T) {
 		},
 	}
 
-	got, err := getPublisherIdFromResponse(resp)
+	got, err := dataverse.GetPublisherIdFromResponse(resp)
 	if err != nil {
 		t.Fatalf("expected publisher id to be parsed, got error: %v", err)
 	}
@@ -252,7 +253,7 @@ func TestUnitGetPublisherIdFromResponse_RejectsNonCanonicalGuid(t *testing.T) {
 		},
 	}
 
-	_, err := getPublisherIdFromResponse(resp)
+	_, err := dataverse.GetPublisherIdFromResponse(resp)
 	if err == nil {
 		t.Fatal("expected malformed publisher id to be rejected")
 	}
