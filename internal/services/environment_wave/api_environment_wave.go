@@ -6,39 +6,30 @@ package environment_wave
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/athena"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type environmentWaveClient struct {
-	Api               *api.Client
+	*athena.Client
 	environmentClient *bapi.Client
 }
 
 func newEnvironmentWaveClient(apiClient *api.Client) *environmentWaveClient {
 	return &environmentWaveClient{
-		Api:               apiClient,
+		Client:            athena.NewClient(apiClient),
 		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
-func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, environmentId string) (*OrganizationDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.AdminPowerPlatformUrl,
-		Path:   "/api/tenants/mytenant/organizations",
-	}
-
-	organizations := OrganizationsArrayDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &organizations)
+func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, environmentId string) (*athena.OrganizationDto, error) {
+	organizations, err := client.GetOrganizations(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute API call for organizations: %w", err)
+		return nil, err
 	}
 
 	env, err := client.environmentClient.GetEnvironment(ctx, environmentId)
@@ -54,27 +45,14 @@ func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, en
 	return nil, fmt.Errorf("geo for environment with ID %s not found", environmentId)
 }
 
-func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environmentId string, featureName string) (*FeatureDto, error) {
+func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environmentId string, featureName string) (*athena.FeatureDto, error) {
 	org, err := client.GetOrgEnvironmentId(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.AdminPowerPlatformUrl,
-		Path:   fmt.Sprintf("/api/environments/%s/features/%s/enable", org.Id, featureName),
-	}
-
-	values := url.Values{}
-	values.Add("geo", org.CrmGeo)
-	apiUrl.RawQuery = values.Encode()
-
-	urlString := apiUrl.String()
-
-	_, err = client.Api.Execute(ctx, nil, "POST", urlString, nil, nil, []int{http.StatusOK}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update feature %s: %w", featureName, err)
+	if err := client.EnableFeature(ctx, org.Id, org.CrmGeo, featureName); err != nil {
+		return nil, err
 	}
 
 	retryAfter := api.DefaultRetryAfter()
@@ -103,33 +81,16 @@ func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environm
 	}
 }
 
-func (client *environmentWaveClient) GetFeature(ctx context.Context, environmentId string, featureName string) (*FeatureDto, error) {
+func (client *environmentWaveClient) GetFeature(ctx context.Context, environmentId string, featureName string) (*athena.FeatureDto, error) {
 	org, err := client.GetOrgEnvironmentId(ctx, environmentId)
 	if err != nil {
 		return nil, err
 	}
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.AdminPowerPlatformUrl,
-		Path:   fmt.Sprintf("/api/environments/%s/features", org.Id),
-	}
-
-	values := url.Values{}
-	values.Add("geo", org.CrmGeo)
-	apiUrl.RawQuery = values.Encode()
-
-	features := FeaturesArrayDto{}
-	_, err = client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &features)
+	feature, err := client.Client.GetFeature(ctx, org.Id, org.CrmGeo, featureName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get features for environment %s: %w", environmentId, err)
 	}
 
-	for _, feature := range features.Values {
-		if feature.FeatureName == featureName {
-			return &feature, nil
-		}
-	}
-
-	return nil, nil
+	return feature, nil
 }

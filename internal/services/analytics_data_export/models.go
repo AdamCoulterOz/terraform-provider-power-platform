@@ -5,6 +5,7 @@ package analytics_data_export
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/analytics"
 )
 
 // AnalyticsDataExportModel represents the model for Analytics Data Export.
@@ -44,7 +45,7 @@ type SinkModel struct {
 }
 
 // convertDtoToModel converts an AnalyticsDataDto to AnalyticsDataModel.
-func convertDtoToModel(dto *AnalyticsDataDto) *AnalyticsDataModel {
+func convertDtoToModel(dto *analytics.AnalyticsDataDto) *AnalyticsDataModel {
 	if dto == nil {
 		return nil
 	}
