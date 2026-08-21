@@ -6,6 +6,7 @@ package role_based_access
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -118,7 +119,7 @@ type environmentGroupRoleBasedAccessAssignmentsDataSourceModel struct {
 	RoleAssignments    []roleAssignmentDataSourceModel `tfsdk:"role_assignments"`
 }
 
-func convertRoleAssignmentDtoToDataSourceModel(assignment roleAssignmentDto) roleAssignmentDataSourceModel {
+func convertRoleAssignmentDtoToDataSourceModel(assignment ppapi.RoleAssignmentDto) roleAssignmentDataSourceModel {
 	model := roleAssignmentDataSourceModel{
 		Id:                            types.StringValue(assignment.RoleAssignmentId),
 		Scope:                         types.StringValue(assignment.Scope),
