@@ -5,51 +5,34 @@ package dlp_policy
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 )
 
 func newDlpPolicyClient(apiClient *api.Client) client {
 	return client{
-		Api: apiClient,
+		Client: bapi.NewClient(apiClient),
 	}
 }
 
+// client is the DLP policy service client. BAPI DLP policy operations are
+// promoted from the embedded bapi.Client; the wrappers below convert between
+// the wire DTOs and the service's intermediate policy model.
 type client struct {
-	Api *api.Client
+	*bapi.Client
 }
 
 func (client *client) GetPolicies(ctx context.Context) ([]dlpPolicyModelDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   "providers/PowerPlatform.Governance/v2/policies",
-	}
-	policiesArray := dlpPolicyDefinitionArrayDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &policiesArray)
+	policiesArray, err := client.Client.GetPolicies(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	policies := make([]dlpPolicyModelDto, 0)
-	for _, policy := range policiesArray.Value {
-		apiUrl := &url.URL{
-			Scheme: constants.HTTPS,
-			Host:   client.Api.GetConfig().Urls.BapiUrl,
-			Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v2/policies/%s", policy.PolicyDefinition.Name),
-		}
-		policy := dlpPolicyDto{}
-		_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &policy)
-		if err != nil {
-			return nil, err
-		}
+	for _, policy := range policiesArray {
 		v, err := covertDlpPolicyToPolicyModelDto(policy)
 		if err != nil {
 			return nil, err
@@ -60,69 +43,50 @@ func (client *client) GetPolicies(ctx context.Context) ([]dlpPolicyModelDto, err
 }
 
 func (client *client) GetPolicy(ctx context.Context, name string) (*dlpPolicyModelDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v2/policies/%s", name),
-	}
-	policy := dlpPolicyDto{}
-	resp, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &policy)
+	policy, err := client.Client.GetPolicy(ctx, name)
 	if err != nil {
-		if resp != nil && resp.HttpResponse.StatusCode == http.StatusNotFound {
-			return nil, customerrors.WrapIntoProviderError(err, customerrors.ErrorCode(constants.ERROR_OBJECT_NOT_FOUND), fmt.Sprintf("DLP Policy '%s' not found", name))
-		}
 		return nil, err
 	}
-	return covertDlpPolicyToPolicyModel(policy)
-}
-
-func (client *client) DeletePolicy(ctx context.Context, name string) error {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v2/policies/%s", name),
-	}
-	_, err := client.Api.Execute(ctx, nil, "DELETE", apiUrl.String(), nil, nil, []int{http.StatusOK}, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return covertDlpPolicyToPolicyModel(*policy)
 }
 
 func (client *client) UpdatePolicy(ctx context.Context, policy dlpPolicyModelDto) (*dlpPolicyModelDto, error) {
-	policyToCreate := convertPolicyModelToDlpPolicy(policy)
+	policyToUpdate := convertPolicyModelToDlpPolicy(policy)
 
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   fmt.Sprintf("providers/PowerPlatform.Governance/v2/policies/%s", policy.Name),
-	}
-	createdPolicy := dlpPolicyDto{}
-
-	_, err := client.Api.Execute(ctx, nil, "PATCH", apiUrl.String(), nil, policyToCreate, []int{http.StatusOK}, &createdPolicy)
+	updatedPolicy, err := client.Client.UpdatePolicy(ctx, policyToUpdate)
 	if err != nil {
 		return nil, err
 	}
 
-	return covertDlpPolicyToPolicyModel(createdPolicy)
+	return covertDlpPolicyToPolicyModel(*updatedPolicy)
 }
 
-func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) dlpPolicyDto {
-	policyToCreate := dlpPolicyDto{
-		PolicyDefinition: dlpPolicyDefinitionDto{
+func (client *client) CreatePolicy(ctx context.Context, policy dlpPolicyModelDto) (*dlpPolicyModelDto, error) {
+	policyToCreate := convertPolicyModelToDlpPolicy(policy)
+
+	createdPolicy, err := client.Client.CreatePolicy(ctx, policyToCreate)
+	if err != nil {
+		return nil, err
+	}
+	return covertDlpPolicyToPolicyModel(*createdPolicy)
+}
+
+func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) bapi.DlpPolicyDto {
+	policyToCreate := bapi.DlpPolicyDto{
+		PolicyDefinition: bapi.DlpPolicyDefinitionDto{
 			Name:                            policy.Name,
 			DisplayName:                     policy.DisplayName,
 			DefaultConnectorsClassification: policy.DefaultConnectorsClassification,
 			EnvironmentType:                 policy.EnvironmentType,
 			Environments:                    policy.Environments,
-			ConnectorGroups:                 []dlpConnectorGroupsDto{},
+			ConnectorGroups:                 []bapi.DlpConnectorGroupsDto{},
 		},
 		ConnectorConfigurationsDefinition:    &policy.ConnectorConfigurationsDefinition,
-		CustomConnectorUrlPatternsDefinition: dlpConnectorUrlPatternsDefinitionDto{},
+		CustomConnectorUrlPatternsDefinition: bapi.DlpConnectorUrlPatternsDefinitionDto{},
 	}
 
 	for _, policy := range policy.CustomConnectorUrlPatternsDefinition {
-		policyToCreate.CustomConnectorUrlPatternsDefinition.Rules = append(policyToCreate.CustomConnectorUrlPatternsDefinition.Rules, dlpConnectorUrlPatternsRuleDto{
+		policyToCreate.CustomConnectorUrlPatternsDefinition.Rules = append(policyToCreate.CustomConnectorUrlPatternsDefinition.Rules, bapi.DlpConnectorUrlPatternsRuleDto{
 			Order:                       policy.Rules[0].Order,
 			ConnectorRuleClassification: policy.Rules[0].ConnectorRuleClassification,
 			Pattern:                     policy.Rules[0].Pattern,
@@ -130,14 +94,14 @@ func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) dlpPolicyDto {
 	}
 
 	for _, connGroups := range policy.ConnectorGroups {
-		conG := dlpConnectorGroupsDto{
+		conG := bapi.DlpConnectorGroupsDto{
 			Classification: connGroups.Classification,
-			Connectors:     []dlpConnectorDto{},
+			Connectors:     []bapi.DlpConnectorDto{},
 		}
 
 		for _, connector := range connGroups.Connectors {
 			nameSplit := strings.Split(connector.Id, "/")
-			con := dlpConnectorDto{
+			con := bapi.DlpConnectorDto{
 				Id:   connector.Id,
 				Name: nameSplit[len(nameSplit)-1],
 				Type: connector.Type,
@@ -147,20 +111,20 @@ func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) dlpPolicyDto {
 		policyToCreate.PolicyDefinition.ConnectorGroups = append(policyToCreate.PolicyDefinition.ConnectorGroups, conG)
 	}
 
-	connectorActionConfigurationsDto := []dlpConnectorActionConfigurationsDto{}
-	endpointConfigurationsDto := []dlpEndpointConfigurationsDto{}
+	connectorActionConfigurationsDto := []bapi.DlpConnectorActionConfigurationsDto{}
+	endpointConfigurationsDto := []bapi.DlpEndpointConfigurationsDto{}
 
 	for _, connGroups := range policy.ConnectorGroups {
 		for _, connector := range connGroups.Connectors {
 			if len(connector.ActionRules) > 0 {
-				connectorActionConfigurationsDto = append(connectorActionConfigurationsDto, dlpConnectorActionConfigurationsDto{
+				connectorActionConfigurationsDto = append(connectorActionConfigurationsDto, bapi.DlpConnectorActionConfigurationsDto{
 					ConnectorId:                        connector.Id,
 					DefaultConnectorActionRuleBehavior: connector.DefaultActionRuleBehavior,
 					ActionRules:                        connector.ActionRules,
 				})
 			}
 			if len(connector.EndpointRules) > 0 {
-				endpointConfigurationsDto = append(endpointConfigurationsDto, dlpEndpointConfigurationsDto{
+				endpointConfigurationsDto = append(endpointConfigurationsDto, bapi.DlpEndpointConfigurationsDto{
 					ConnectorId:   connector.Id,
 					EndpointRules: connector.EndpointRules,
 				})
@@ -169,7 +133,7 @@ func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) dlpPolicyDto {
 	}
 
 	if len(connectorActionConfigurationsDto) > 0 || len(endpointConfigurationsDto) > 0 {
-		policyToCreate.ConnectorConfigurationsDefinition = &dlpConnectorConfigurationsDefinitionDto{}
+		policyToCreate.ConnectorConfigurationsDefinition = &bapi.DlpConnectorConfigurationsDefinitionDto{}
 
 		if len(connectorActionConfigurationsDto) > 0 {
 			policyToCreate.ConnectorConfigurationsDefinition.ConnectorActionConfigurations = connectorActionConfigurationsDto
@@ -183,7 +147,7 @@ func convertPolicyModelToDlpPolicy(policy dlpPolicyModelDto) dlpPolicyDto {
 	return policyToCreate
 }
 
-func covertDlpPolicyToPolicyModel(policy dlpPolicyDto) (*dlpPolicyModelDto, error) {
+func covertDlpPolicyToPolicyModel(policy bapi.DlpPolicyDto) (*dlpPolicyModelDto, error) {
 	policyModel := dlpPolicyModelDto{
 		Name:                                 policy.PolicyDefinition.Name,
 		DisplayName:                          policy.PolicyDefinition.DisplayName,
@@ -195,8 +159,8 @@ func covertDlpPolicyToPolicyModel(policy dlpPolicyDto) (*dlpPolicyModelDto, erro
 		LastModifiedBy:                       policy.PolicyDefinition.LastModifiedBy.DisplayName,
 		LastModifiedTime:                     policy.PolicyDefinition.LastModifiedTime,
 		DefaultConnectorsClassification:      policy.PolicyDefinition.DefaultConnectorsClassification,
-		ConnectorConfigurationsDefinition:    dlpConnectorConfigurationsDefinitionDto{},
-		CustomConnectorUrlPatternsDefinition: []dlpConnectorUrlPatternsDefinitionDto{},
+		ConnectorConfigurationsDefinition:    bapi.DlpConnectorConfigurationsDefinitionDto{},
+		CustomConnectorUrlPatternsDefinition: []bapi.DlpConnectorUrlPatternsDefinitionDto{},
 		ConnectorGroups:                      []dlpConnectorGroupsModelDto{},
 	}
 
@@ -231,8 +195,8 @@ func covertDlpPolicyToPolicyModel(policy dlpPolicyDto) (*dlpPolicyModelDto, erro
 	}
 
 	for _, rule := range policy.CustomConnectorUrlPatternsDefinition.Rules {
-		policyModel.CustomConnectorUrlPatternsDefinition = append(policyModel.CustomConnectorUrlPatternsDefinition, dlpConnectorUrlPatternsDefinitionDto{
-			Rules: append([]dlpConnectorUrlPatternsRuleDto{}, rule),
+		policyModel.CustomConnectorUrlPatternsDefinition = append(policyModel.CustomConnectorUrlPatternsDefinition, bapi.DlpConnectorUrlPatternsDefinitionDto{
+			Rules: append([]bapi.DlpConnectorUrlPatternsRuleDto{}, rule),
 		})
 	}
 
@@ -253,21 +217,4 @@ func covertDlpPolicyToPolicyModel(policy dlpPolicyDto) (*dlpPolicyModelDto, erro
 	})
 
 	return &policyModel, nil
-}
-
-func (client *client) CreatePolicy(ctx context.Context, policy dlpPolicyModelDto) (*dlpPolicyModelDto, error) {
-	policyToCreate := convertPolicyModelToDlpPolicy(policy)
-
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   "/providers/PowerPlatform.Governance/v2/policies",
-	}
-
-	createdPolicy := dlpPolicyDto{}
-	_, err := client.Api.Execute(ctx, nil, "POST", apiUrl.String(), nil, policyToCreate, []int{http.StatusCreated}, &createdPolicy)
-	if err != nil {
-		return nil, err
-	}
-	return covertDlpPolicyToPolicyModel(createdPolicy)
 }
