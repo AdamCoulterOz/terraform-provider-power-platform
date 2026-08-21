@@ -5,7 +5,6 @@ package environment
 
 import (
 	"fmt"
-	"time"
 )
 
 const (
@@ -37,32 +36,3 @@ var (
 	// which covers the European Union and the EFTA states.
 	EuDataBoundaryLocations = []string{"europe", "france", "germany", "italy", "norway", "poland", "sweden", "switzerland"}
 )
-
-// The types below are Dataverse Web API wire shapes used by
-// GetDefaultCurrencyForEnvironment; they move to the dataverse client library
-// with the Dataverse extraction.
-
-type organizationSettingsArrayDto struct {
-	Value []organizationSettingsDto `json:"value"`
-}
-
-type organizationSettingsDto struct {
-	ODataEtag      string    `json:"@odata.etag"`
-	CreatedOn      time.Time `json:"createdon"`
-	BaseCurrencyId string    `json:"_basecurrencyid_value"`
-}
-
-type TransactionCurrencyDto struct {
-	OrganizationValue     string  `json:"_organizationid_value"`
-	CurrencyName          string  `json:"currencyname"`
-	CurrencySymbol        string  `json:"currencysymbol"`
-	IsoCurrencyCode       string  `json:"isocurrencycode"`
-	CreatedOn             string  `json:"createdon"`
-	CurrencyPrecision     int     `json:"currencyprecision"`
-	ExchangeRate          float32 `json:"exchangerate"`
-	TransactionCurrencyId string  `json:"transactioncurrencyid"`
-}
-
-type transactionCurrencyArrayDto struct {
-	Value []TransactionCurrencyDto `json:"value"`
-}
