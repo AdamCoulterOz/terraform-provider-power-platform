@@ -17,52 +17,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 )
 
-type environmentGroupRuleSetDto struct {
-	Value []EnvironmentGroupRuleSetValueSetDto `json:"value"`
-}
-
-type EnvironmentGroupRuleSetValueSetDto struct {
-	Parameters        []*environmentGroupRuleSetParameterDto       `json:"parameters"`
-	Id                *string                                      `json:"id,omitempty"`
-	LastModified      *string                                      `json:"lastModified,omitempty"`
-	EnvironmentFilter *environmentGroupRuleSetEnvironmentFilterDto `json:"environmentFilter,omitempty"`
-}
-
-type environmentGroupRuleSetEnvironmentFilterDto struct {
-	Type  string                                `json:"type"`
-	Value []environmentGroupRuleSetValueTypeDto `json:"values"`
-}
-
-type environmentGroupRuleSetValueTypeDto struct {
-	Id   string `json:"id"`
-	Type string `json:"type"`
-}
-
-type environmentGroupRuleSetValueDto struct {
-	Id    string `json:"id"`
-	Value string `json:"value"`
-}
-
-type environmentGroupRuleSetParameterDto struct {
-	HasStagedChanges *bool                             `json:"hasStagedChanges,omitempty"`
-	Type             string                            `json:"type"`
-	ResourceType     string                            `json:"resourceType"`
-	Value            []environmentGroupRuleSetValueDto `json:"value"`
-}
-
-func convertEnvironmentGroupRuleSetResourceModelToDto(ctx context.Context, model environmentGroupRuleSetResourceModel) (EnvironmentGroupRuleSetValueSetDto, error) {
-	dto := EnvironmentGroupRuleSetValueSetDto{}
+func convertEnvironmentGroupRuleSetResourceModelToDto(ctx context.Context, model environmentGroupRuleSetResourceModel) (ppapi.EnvironmentGroupRuleSetValueSetDto, error) {
+	dto := ppapi.EnvironmentGroupRuleSetValueSetDto{}
 
 	if !model.Id.IsUnknown() && !model.Id.IsNull() {
 		dto.Id = model.Id.ValueStringPointer()
 	}
 	currentTime := time.Now().Format(time.RFC3339Nano)
 	dto.LastModified = &currentTime
-	dto.EnvironmentFilter = &environmentGroupRuleSetEnvironmentFilterDto{}
+	dto.EnvironmentFilter = &ppapi.EnvironmentGroupRuleSetEnvironmentFilterDto{}
 	dto.EnvironmentFilter.Type = "Include"
-	dto.EnvironmentFilter.Value = append(dto.EnvironmentFilter.Value, environmentGroupRuleSetValueTypeDto{
+	dto.EnvironmentFilter.Value = append(dto.EnvironmentFilter.Value, ppapi.EnvironmentGroupRuleSetValueTypeDto{
 		Id:   model.EnvironmentGroupId.ValueString(),
 		Type: "EnvironmentGroup",
 	})
@@ -85,7 +53,7 @@ func convertEnvironmentGroupRuleSetResourceModelToDto(ctx context.Context, model
 	return dto, nil
 }
 
-func convertAiGenerativeSettings(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) error {
+func convertAiGenerativeSettings(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) error {
 	aiGenerativeSettingsObj := attrs["ai_generative_settings"]
 	if !aiGenerativeSettingsObj.IsNull() && !aiGenerativeSettingsObj.IsUnknown() {
 		objectValue, ok := aiGenerativeSettingsObj.(basetypes.ObjectValue)
@@ -100,31 +68,31 @@ func convertAiGenerativeSettings(ctx context.Context, attrs map[string]attr.Valu
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             AI_GENERATIVE_SETTINGS,
-			ResourceType:     NOT_SPECIFIED,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.AI_GENERATIVE_SETTINGS,
+			ResourceType:     ppapi.NOT_SPECIFIED,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED,
 			Value: strconv.FormatBool(aiGenerativeSettings.MoveDataAcrossRegionsEnabled.ValueBool()),
 		})
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    BING_CHAT_ENABLED,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.BING_CHAT_ENABLED,
 			Value: strconv.FormatBool(aiGenerativeSettings.BingSearchEnabled.ValueBool()),
 		})
 	}
 	return nil
 }
 
-func convertAiGeneratedDesc(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) error {
+func convertAiGeneratedDesc(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) error {
 	aiGeneratedDescObj := attrs["ai_generated_descriptions"]
 	if !aiGeneratedDescObj.IsNull() && !aiGeneratedDescObj.IsUnknown() {
 		objectValue, ok := aiGeneratedDescObj.(basetypes.ObjectValue)
@@ -139,27 +107,27 @@ func convertAiGeneratedDesc(ctx context.Context, attrs map[string]attr.Value, dt
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             AI_GENERATED_DESC,
-			ResourceType:     APP,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.AI_GENERATED_DESC,
+			ResourceType:     ppapi.APP,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    DISABLE_AI_GENERATED_DESCRIPTIONS,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.DISABLE_AI_GENERATED_DESCRIPTIONS,
 			Value: strconv.FormatBool(!aiGeneratedDesc.AiDescriptionEnabled.ValueBool()),
 		})
 	}
 	return nil
 }
 
-func convertBackupRetention(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) error {
+func convertBackupRetention(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) error {
 	backupRetentionObj := attrs["backup_retention"]
 	if !backupRetentionObj.IsNull() && !backupRetentionObj.IsUnknown() {
 		objectValue, ok := backupRetentionObj.(basetypes.ObjectValue)
@@ -174,27 +142,27 @@ func convertBackupRetention(ctx context.Context, attrs map[string]attr.Value, dt
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             BACKUP_RETENTION,
-			ResourceType:     NOT_SPECIFIED,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.BACKUP_RETENTION,
+			ResourceType:     ppapi.NOT_SPECIFIED,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    RETENTION_PERIOD,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.RETENTION_PERIOD,
 			Value: fmt.Sprintf("%d.00:00:00", backupRetention.PeriodInDays.ValueInt32()),
 		})
 	}
 	return nil
 }
 
-func convertSolutionCheckerEnforcement(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) {
+func convertSolutionCheckerEnforcement(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) {
 	solutionCheckerObj := attrs["solution_checker_enforcement"]
 	if !solutionCheckerObj.IsNull() && !solutionCheckerObj.IsUnknown() {
 		objectValue, ok := solutionCheckerObj.(basetypes.ObjectValue)
@@ -207,34 +175,34 @@ func convertSolutionCheckerEnforcement(ctx context.Context, attrs map[string]att
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             SOLUTION_CHECKER_ENFORCEMENT,
-			ResourceType:     NOT_SPECIFIED,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.SOLUTION_CHECKER_ENFORCEMENT,
+			ResourceType:     ppapi.NOT_SPECIFIED,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    SOLUTION_CHECKER_MODE,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.SOLUTION_CHECKER_MODE,
 			Value: solutionChecker.SolutionCheckerMode.ValueString(),
 		})
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    SUPPRESS_VALIDATION_EMAILS,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.SUPPRESS_VALIDATION_EMAILS,
 			Value: strconv.FormatBool(solutionChecker.SendEmailsEnabled.ValueBool()),
 		})
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    SOLUTION_CHECKER_RULE_OVERRIDES,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.SOLUTION_CHECKER_RULE_OVERRIDES,
 			Value: "",
 		})
 	}
 }
 
-func convertUsageInsights(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) {
+func convertUsageInsights(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) {
 	usageInsightsObj := attrs["usage_insights"]
 	if !usageInsightsObj.IsNull() && !usageInsightsObj.IsUnknown() {
 		objectValue, ok := usageInsightsObj.(basetypes.ObjectValue)
@@ -247,30 +215,30 @@ func convertUsageInsights(ctx context.Context, attrs map[string]attr.Value, dto 
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             USAGE_INSIGHTS,
-			ResourceType:     NOT_SPECIFIED,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.USAGE_INSIGHTS,
+			ResourceType:     ppapi.NOT_SPECIFIED,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    INCLUDE_ON_HOME_PAGE_INSIGHTS,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.INCLUDE_ON_HOME_PAGE_INSIGHTS,
 			Value: "false",
 		})
-		rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-			Id:    EXCLUDE_ENVIRONMENT_FROM_ANALYSIS,
+		rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+			Id:    ppapi.EXCLUDE_ENVIRONMENT_FROM_ANALYSIS,
 			Value: strconv.FormatBool(!usageInsights.InsightsEnabled.ValueBool()),
 		})
 	}
 }
 
-func convertSharingControls(ctx context.Context, attrs map[string]attr.Value, dto *EnvironmentGroupRuleSetValueSetDto) {
+func convertSharingControls(ctx context.Context, attrs map[string]attr.Value, dto *ppapi.EnvironmentGroupRuleSetValueSetDto) {
 	sharingControlObj := attrs["sharing_controls"]
 	if !sharingControlObj.IsNull() && !sharingControlObj.IsUnknown() {
 		objectValue, ok := sharingControlObj.(basetypes.ObjectValue)
@@ -283,49 +251,49 @@ func convertSharingControls(ctx context.Context, attrs map[string]attr.Value, dt
 
 		hasStatedChanges := true
 
-		rule := environmentGroupRuleSetParameterDto{
+		rule := ppapi.EnvironmentGroupRuleSetParameterDto{
 			HasStagedChanges: &hasStatedChanges,
-			Type:             SHARING,
-			ResourceType:     APP,
-			Value:            make([]environmentGroupRuleSetValueDto, 0),
+			Type:             ppapi.SHARING,
+			ResourceType:     ppapi.APP,
+			Value:            make([]ppapi.EnvironmentGroupRuleSetValueDto, 0),
 		}
 
 		if dto.Parameters == nil {
-			dto.Parameters = make([]*environmentGroupRuleSetParameterDto, 0)
+			dto.Parameters = make([]*ppapi.EnvironmentGroupRuleSetParameterDto, 0)
 		}
 		dto.Parameters = append(dto.Parameters, &rule)
 
 		if sharingControl.ShareMode.ValueString() == "no limit" {
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    CAN_SHARE_WITH_SECURITY_GROUPS,
-				Value: NO_LIMIT,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.CAN_SHARE_WITH_SECURITY_GROUPS,
+				Value: ppapi.NO_LIMIT,
 			})
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    IS_GROUP_SHARING_DISABLED,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.IS_GROUP_SHARING_DISABLED,
 				Value: "false",
 			})
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    MAXIMUM_SHARE_LIMIT,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.MAXIMUM_SHARE_LIMIT,
 				Value: "-1",
 			})
 		} else {
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    CAN_SHARE_WITH_SECURITY_GROUPS,
-				Value: EXCLUDE_SHARING_TO_SECURITY_GROUPS,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.CAN_SHARE_WITH_SECURITY_GROUPS,
+				Value: ppapi.EXCLUDE_SHARING_TO_SECURITY_GROUPS,
 			})
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    IS_GROUP_SHARING_DISABLED,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.IS_GROUP_SHARING_DISABLED,
 				Value: "true",
 			})
-			rule.Value = append(rule.Value, environmentGroupRuleSetValueDto{
-				Id:    MAXIMUM_SHARE_LIMIT,
+			rule.Value = append(rule.Value, ppapi.EnvironmentGroupRuleSetValueDto{
+				Id:    ppapi.MAXIMUM_SHARE_LIMIT,
 				Value: sharingControl.ShareMaxLimit.String(),
 			})
 		}
 	}
 }
 
-func convertEnvironmentGroupRuleSetDtoToModel(environmentGroupId string, ruleSet *EnvironmentGroupRuleSetValueSetDto, policy *ruleBasedPolicyDto) (*environmentGroupRuleSetResourceModel, error) {
+func convertEnvironmentGroupRuleSetDtoToModel(environmentGroupId string, ruleSet *ppapi.EnvironmentGroupRuleSetValueSetDto, policy *ppapi.RuleBasedPolicyDto) (*environmentGroupRuleSetResourceModel, error) {
 	rulesModel, err := convertRulesDtoToModel(ruleSet, policy)
 	if err != nil {
 		return nil, err
@@ -348,37 +316,37 @@ func convertEnvironmentGroupRuleSetDtoToModel(environmentGroupId string, ruleSet
 	return &model, nil
 }
 
-func convertRulesDtoToModel(dto *EnvironmentGroupRuleSetValueSetDto, policy *ruleBasedPolicyDto) (basetypes.ObjectValue, error) {
-	sharingControlType, sharingControlValue, err := convertSharingControlsDtoToModel(getParameterByType(dto, SHARING))
+func convertRulesDtoToModel(dto *ppapi.EnvironmentGroupRuleSetValueSetDto, policy *ppapi.RuleBasedPolicyDto) (basetypes.ObjectValue, error) {
+	sharingControlType, sharingControlValue, err := convertSharingControlsDtoToModel(getParameterByType(dto, ppapi.SHARING))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	usageInsightsType, usageInsightsValue, err := convertUsageInsightsDtoToModel(getParameterByType(dto, USAGE_INSIGHTS))
+	usageInsightsType, usageInsightsValue, err := convertUsageInsightsDtoToModel(getParameterByType(dto, ppapi.USAGE_INSIGHTS))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	makerWelcomeContentType, makerWelcomeContentValue, err := convertMakerWelcomeContentDtoToModel(policyRuleSetsOf(policy), getParameterByType(dto, MAKER_WELCOME_CONTENT))
+	makerWelcomeContentType, makerWelcomeContentValue, err := convertMakerWelcomeContentDtoToModel(policyRuleSetsOf(policy), getParameterByType(dto, ppapi.MAKER_WELCOME_CONTENT))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	solutionChekerEnforcementType, solutionChekerEnforcementValue, err := convertSolutionCheckerEnforcementDtoToModel(getParameterByType(dto, SOLUTION_CHECKER_ENFORCEMENT))
+	solutionChekerEnforcementType, solutionChekerEnforcementValue, err := convertSolutionCheckerEnforcementDtoToModel(getParameterByType(dto, ppapi.SOLUTION_CHECKER_ENFORCEMENT))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	backupRetentionType, backupRetentionValue, err := convertBackupRetentionDtoToModel(getParameterByType(dto, BACKUP_RETENTION))
+	backupRetentionType, backupRetentionValue, err := convertBackupRetentionDtoToModel(getParameterByType(dto, ppapi.BACKUP_RETENTION))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	aiGeneratedDescType, aiGeneratedDescValue, err := convertAiGeneratedDescDtoToModel(getParameterByType(dto, AI_GENERATED_DESC))
+	aiGeneratedDescType, aiGeneratedDescValue, err := convertAiGeneratedDescDtoToModel(getParameterByType(dto, ppapi.AI_GENERATED_DESC))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
-	aiGenerativeSettingsType, aiGenerativeSettingsValue, err := convertAiGenerativeSettingsDtoToModel(getParameterByType(dto, AI_GENERATIVE_SETTINGS))
+	aiGenerativeSettingsType, aiGenerativeSettingsValue, err := convertAiGenerativeSettingsDtoToModel(getParameterByType(dto, ppapi.AI_GENERATIVE_SETTINGS))
 	if err != nil {
 		return types.ObjectNull(map[string]attr.Type{}), err
 	}
 
-	policyRuleSets := []policyRuleSetDto{}
+	policyRuleSets := []ppapi.PolicyRuleSetDto{}
 	if policy != nil {
 		policyRuleSets = policy.RuleSets
 	}
@@ -430,7 +398,7 @@ func convertRulesDtoToModel(dto *EnvironmentGroupRuleSetValueSetDto, policy *rul
 	return types.ObjectValueMust(atr, attrV), nil
 }
 
-func convertAiGenerativeSettingsDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertAiGenerativeSettingsDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"move_data_across_regions_enabled": types.BoolType,
 		"bing_search_enabled":              types.BoolType,
@@ -440,13 +408,13 @@ func convertAiGenerativeSettingsDtoToModel(dto *environmentGroupRuleSetParameter
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	crossGeoCopilotDataMovementEnabled := tryGetRuleValueFromDto(dto.Value, CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED)
+	crossGeoCopilotDataMovementEnabled := tryGetRuleValueFromDto(dto.Value, ppapi.CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED)
 	if crossGeoCopilotDataMovementEnabled == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.CROSS_GEO_COPILOT_DATA_MOVEMENT_ENABLED)
 	}
-	bingSearchEnabled := tryGetRuleValueFromDto(dto.Value, BING_CHAT_ENABLED)
+	bingSearchEnabled := tryGetRuleValueFromDto(dto.Value, ppapi.BING_CHAT_ENABLED)
 	if bingSearchEnabled == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", BING_CHAT_ENABLED)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.BING_CHAT_ENABLED)
 	}
 
 	attrValue := map[string]attr.Value{}
@@ -456,7 +424,7 @@ func convertAiGenerativeSettingsDtoToModel(dto *environmentGroupRuleSetParameter
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, attrValue), nil
 }
 
-func convertAiGeneratedDescDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertAiGeneratedDescDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"ai_description_enabled": types.BoolType,
 	}
@@ -465,9 +433,9 @@ func convertAiGeneratedDescDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	aiDescriptionEnabled := tryGetRuleValueFromDto(dto.Value, DISABLE_AI_GENERATED_DESCRIPTIONS)
+	aiDescriptionEnabled := tryGetRuleValueFromDto(dto.Value, ppapi.DISABLE_AI_GENERATED_DESCRIPTIONS)
 	if aiDescriptionEnabled == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", DISABLE_AI_GENERATED_DESCRIPTIONS)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.DISABLE_AI_GENERATED_DESCRIPTIONS)
 	}
 
 	attrValue := map[string]attr.Value{}
@@ -476,7 +444,7 @@ func convertAiGeneratedDescDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, attrValue), nil
 }
 
-func convertBackupRetentionDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertBackupRetentionDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"period_in_days": types.Int32Type,
 	}
@@ -485,9 +453,9 @@ func convertBackupRetentionDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	periodInDays := tryGetRuleValueFromDto(dto.Value, RETENTION_PERIOD)
+	periodInDays := tryGetRuleValueFromDto(dto.Value, ppapi.RETENTION_PERIOD)
 	if periodInDays == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", RETENTION_PERIOD)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.RETENTION_PERIOD)
 	}
 
 	attrValue := map[string]attr.Value{}
@@ -506,7 +474,7 @@ func convertBackupRetentionDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, attrValue), nil
 }
 
-func convertSolutionCheckerEnforcementDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertSolutionCheckerEnforcementDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"solution_checker_mode": types.StringType,
 		"send_emails_enabled":   types.BoolType,
@@ -516,13 +484,13 @@ func convertSolutionCheckerEnforcementDtoToModel(dto *environmentGroupRuleSetPar
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	solutionCheckerMode := tryGetRuleValueFromDto(dto.Value, SOLUTION_CHECKER_MODE)
+	solutionCheckerMode := tryGetRuleValueFromDto(dto.Value, ppapi.SOLUTION_CHECKER_MODE)
 	if solutionCheckerMode == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", SOLUTION_CHECKER_MODE)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.SOLUTION_CHECKER_MODE)
 	}
-	sendEmailsEnabled := tryGetRuleValueFromDto(dto.Value, SUPPRESS_VALIDATION_EMAILS)
+	sendEmailsEnabled := tryGetRuleValueFromDto(dto.Value, ppapi.SUPPRESS_VALIDATION_EMAILS)
 	if sendEmailsEnabled == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", SUPPRESS_VALIDATION_EMAILS)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.SUPPRESS_VALIDATION_EMAILS)
 	}
 
 	attrValue := map[string]attr.Value{}
@@ -534,14 +502,14 @@ func convertSolutionCheckerEnforcementDtoToModel(dto *environmentGroupRuleSetPar
 
 // convertMakerWelcomeContentDtoToModel prefers the policy rule set, falling back to the legacy
 // parameter for rule sets written before maker welcome content moved to the policies API.
-func convertMakerWelcomeContentDtoToModel(policyRuleSets []policyRuleSetDto, dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertMakerWelcomeContentDtoToModel(policyRuleSets []ppapi.PolicyRuleSetDto, dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"maker_onboarding_url":      types.StringType,
 		"maker_onboarding_markdown": types.StringType,
 	}
 	objType := types.ObjectType{AttrTypes: attrType}
 
-	if ruleSet := findPolicyRuleSet(policyRuleSets, MAKER_ONBOARDING_CONTENT_ID); ruleSet != nil {
+	if ruleSet := findPolicyRuleSet(policyRuleSets, ppapi.MAKER_ONBOARDING_CONTENT_ID); ruleSet != nil {
 		asString := func(key string) types.String {
 			if s, ok := ruleSet.Inputs[key].(string); ok {
 				return types.StringValue(s)
@@ -549,8 +517,8 @@ func convertMakerWelcomeContentDtoToModel(policyRuleSets []policyRuleSetDto, dto
 			return types.StringValue("")
 		}
 		return objType, types.ObjectValueMust(attrType, map[string]attr.Value{
-			"maker_onboarding_url":      asString(MAKER_ONBOARDING_URL),
-			"maker_onboarding_markdown": asString(MAKER_ONBOARDING_MARKDOWN),
+			"maker_onboarding_url":      asString(ppapi.MAKER_ONBOARDING_URL),
+			"maker_onboarding_markdown": asString(ppapi.MAKER_ONBOARDING_MARKDOWN),
 		}), nil
 	}
 
@@ -558,13 +526,13 @@ func convertMakerWelcomeContentDtoToModel(policyRuleSets []policyRuleSetDto, dto
 		return objType, types.ObjectNull(attrType), nil
 	}
 
-	makerOnboardingUrl := tryGetRuleValueFromDto(dto.Value, MAKER_ONBOARDING_URL)
+	makerOnboardingUrl := tryGetRuleValueFromDto(dto.Value, ppapi.MAKER_ONBOARDING_URL)
 	if makerOnboardingUrl == nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", MAKER_ONBOARDING_URL)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.MAKER_ONBOARDING_URL)
 	}
-	makerOnboardingMarkdown := tryGetRuleValueFromDto(dto.Value, MAKER_ONBOARDING_MARKDOWN)
+	makerOnboardingMarkdown := tryGetRuleValueFromDto(dto.Value, ppapi.MAKER_ONBOARDING_MARKDOWN)
 	if makerOnboardingMarkdown == nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", MAKER_ONBOARDING_MARKDOWN)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.MAKER_ONBOARDING_MARKDOWN)
 	}
 
 	return objType, types.ObjectValueMust(attrType, map[string]attr.Value{
@@ -573,7 +541,7 @@ func convertMakerWelcomeContentDtoToModel(policyRuleSets []policyRuleSetDto, dto
 	}), nil
 }
 
-func convertUsageInsightsDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertUsageInsightsDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"insights_enabled": types.BoolType,
 	}
@@ -582,9 +550,9 @@ func convertUsageInsightsDtoToModel(dto *environmentGroupRuleSetParameterDto) (b
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	excludeEnvFromAnalisys := tryGetRuleValueFromDto(dto.Value, EXCLUDE_ENVIRONMENT_FROM_ANALYSIS)
+	excludeEnvFromAnalisys := tryGetRuleValueFromDto(dto.Value, ppapi.EXCLUDE_ENVIRONMENT_FROM_ANALYSIS)
 	if excludeEnvFromAnalisys == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", EXCLUDE_ENVIRONMENT_FROM_ANALYSIS)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.EXCLUDE_ENVIRONMENT_FROM_ANALYSIS)
 	}
 	attrValue := map[string]attr.Value{}
 	attrValue["insights_enabled"] = types.BoolValue(excludeEnvFromAnalisys.Value == "false")
@@ -592,7 +560,7 @@ func convertUsageInsightsDtoToModel(dto *environmentGroupRuleSetParameterDto) (b
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, attrValue), nil
 }
 
-func convertSharingControlsDtoToModel(dto *environmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertSharingControlsDtoToModel(dto *ppapi.EnvironmentGroupRuleSetParameterDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{
 		"share_mode":      types.StringType,
 		"share_max_limit": types.NumberType,
@@ -602,18 +570,18 @@ func convertSharingControlsDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	canShareWithSecurityGroups := tryGetRuleValueFromDto(dto.Value, CAN_SHARE_WITH_SECURITY_GROUPS)
+	canShareWithSecurityGroups := tryGetRuleValueFromDto(dto.Value, ppapi.CAN_SHARE_WITH_SECURITY_GROUPS)
 	if canShareWithSecurityGroups == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", CAN_SHARE_WITH_SECURITY_GROUPS)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.CAN_SHARE_WITH_SECURITY_GROUPS)
 	}
-	maximumShareLimit := tryGetRuleValueFromDto(dto.Value, MAXIMUM_SHARE_LIMIT)
+	maximumShareLimit := tryGetRuleValueFromDto(dto.Value, ppapi.MAXIMUM_SHARE_LIMIT)
 	if maximumShareLimit == nil {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", MAXIMUM_SHARE_LIMIT)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s value not found in response", ppapi.MAXIMUM_SHARE_LIMIT)
 	}
 	maxLimitValue, _ := strconv.ParseFloat(maximumShareLimit.Value, 64)
 
 	attrValue := map[string]attr.Value{}
-	if canShareWithSecurityGroups.Value == NO_LIMIT {
+	if canShareWithSecurityGroups.Value == ppapi.NO_LIMIT {
 		attrValue["share_mode"] = types.StringValue("no limit")
 		attrValue["share_max_limit"] = types.NumberNull() // -1 value is considered as null in terraform
 	} else {
@@ -624,7 +592,7 @@ func convertSharingControlsDtoToModel(dto *environmentGroupRuleSetParameterDto) 
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, attrValue), nil
 }
 
-func tryGetRuleValueFromDto(values []environmentGroupRuleSetValueDto, valueId string) *environmentGroupRuleSetValueDto {
+func tryGetRuleValueFromDto(values []ppapi.EnvironmentGroupRuleSetValueDto, valueId string) *ppapi.EnvironmentGroupRuleSetValueDto {
 	for _, value := range values {
 		if value.Id == valueId {
 			return &value
@@ -633,7 +601,7 @@ func tryGetRuleValueFromDto(values []environmentGroupRuleSetValueDto, valueId st
 	return nil
 }
 
-func getParameterByType(params *EnvironmentGroupRuleSetValueSetDto, paramType string) *environmentGroupRuleSetParameterDto {
+func getParameterByType(params *ppapi.EnvironmentGroupRuleSetValueSetDto, paramType string) *ppapi.EnvironmentGroupRuleSetParameterDto {
 	if params == nil {
 		return nil
 	}
@@ -645,54 +613,6 @@ func getParameterByType(params *EnvironmentGroupRuleSetValueSetDto, paramType st
 	return nil
 }
 
-// --- Rule-based policy DTOs. These rule sets are served by the rule-based policies API. ---
-
-type ruleBasedPolicyDto struct {
-	Id           string             `json:"id,omitempty"`
-	Name         string             `json:"name,omitempty"`
-	TenantId     string             `json:"tenantId,omitempty"`
-	LastModified string             `json:"lastModified,omitempty"`
-	RuleSetCount int                `json:"ruleSetCount,omitempty"`
-	RuleSets     []policyRuleSetDto `json:"ruleSets,omitempty"`
-}
-
-type ruleBasedPolicyRequestDto struct {
-	Name     string             `json:"name"`
-	RuleSets []policyRuleSetDto `json:"ruleSets"`
-}
-
-type policyRuleSetDto struct {
-	Id      string         `json:"id"`
-	Version string         `json:"version"`
-	Inputs  map[string]any `json:"inputs"`
-}
-
-type ruleAssignmentDto struct {
-	PolicyId     string `json:"policyId"`
-	ResourceId   string `json:"resourceId"`
-	ResourceType string `json:"resourceType"`
-	RuleSetCount int    `json:"ruleSetCount"`
-	TenantId     string `json:"tenantId"`
-}
-
-type ruleAssignmentsResponseDto struct {
-	Value []ruleAssignmentDto `json:"value"`
-}
-
-type policyAssignmentRequestDto struct {
-	AssignmentOverrides []any `json:"assignmentOverrides"`
-}
-
-type removeRuleRequestDto struct {
-	Name     string             `json:"name"`
-	RuleSets []removeRuleSetDto `json:"ruleSets"`
-}
-
-type removeRuleSetDto struct {
-	Id      string `json:"id"`
-	Version string `json:"version"`
-}
-
 type allowedConnectorDto struct {
 	AllowedActionsMode         string   `json:"AllowedActionsMode"`
 	AllowedConnectionTypesMode string   `json:"AllowedConnectionTypesMode"`
@@ -702,10 +622,10 @@ type allowedConnectorDto struct {
 
 // managedPolicyRuleSetIds maps policy rule set IDs to the versions this resource manages.
 var managedPolicyRuleSetIds = map[string]string{
-	ADVANCED_CONNECTOR_POLICIES_ONLY_ID: ADVANCED_CONNECTOR_POLICIES_VERSION,
-	CONTENT_SECURITY_POLICY_ID:          CONTENT_SECURITY_POLICY_VERSION,
-	CONNECTOR_MANAGEMENT_ID:             CONNECTOR_MANAGEMENT_VERSION,
-	MAKER_ONBOARDING_CONTENT_ID:         MAKER_ONBOARDING_CONTENT_VERSION,
+	ppapi.ADVANCED_CONNECTOR_POLICIES_ONLY_ID: ppapi.ADVANCED_CONNECTOR_POLICIES_VERSION,
+	ppapi.CONTENT_SECURITY_POLICY_ID:          ppapi.CONTENT_SECURITY_POLICY_VERSION,
+	ppapi.CONNECTOR_MANAGEMENT_ID:             ppapi.CONNECTOR_MANAGEMENT_VERSION,
+	ppapi.MAKER_ONBOARDING_CONTENT_ID:         ppapi.MAKER_ONBOARDING_CONTENT_VERSION,
 }
 
 // policyRuleAttributeNames are the rules under `rules` that are backed by the rule-based policies API.
@@ -746,8 +666,8 @@ func hasLegacyRules(rules basetypes.ObjectValue) bool {
 }
 
 // mergePolicyRuleSets replaces the rule sets managed by this resource while preserving any others.
-func mergePolicyRuleSets(existing, desired []policyRuleSetDto) []policyRuleSetDto {
-	merged := make([]policyRuleSetDto, 0, len(existing)+len(desired))
+func mergePolicyRuleSets(existing, desired []ppapi.PolicyRuleSetDto) []ppapi.PolicyRuleSetDto {
+	merged := make([]ppapi.PolicyRuleSetDto, 0, len(existing)+len(desired))
 	for _, rs := range existing {
 		if _, managed := managedPolicyRuleSetIds[rs.Id]; !managed {
 			merged = append(merged, rs)
@@ -762,10 +682,10 @@ func terraformManagedPolicyName(environmentGroupId string) string {
 	return fmt.Sprintf("terraform-managed-%s", environmentGroupId)
 }
 
-func convertRulesModelToPolicyDto(ctx context.Context, model environmentGroupRuleSetResourceModel) (ruleBasedPolicyRequestDto, error) {
-	dto := ruleBasedPolicyRequestDto{
+func convertRulesModelToPolicyDto(ctx context.Context, model environmentGroupRuleSetResourceModel) (ppapi.RuleBasedPolicyRequestDto, error) {
+	dto := ppapi.RuleBasedPolicyRequestDto{
 		Name:     terraformManagedPolicyName(model.EnvironmentGroupId.ValueString()),
-		RuleSets: make([]policyRuleSetDto, 0),
+		RuleSets: make([]ppapi.PolicyRuleSetDto, 0),
 	}
 
 	if model.Rules.IsNull() || model.Rules.IsUnknown() {
@@ -779,10 +699,10 @@ func convertRulesModelToPolicyDto(ctx context.Context, model environmentGroupRul
 		if diags := obj.As(ctx, &advancedConnector, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return dto, fmt.Errorf("failed to convert advanced_connector_policies_only: %v", diags)
 		}
-		dto.RuleSets = append(dto.RuleSets, policyRuleSetDto{
-			Id:      ADVANCED_CONNECTOR_POLICIES_ONLY_ID,
-			Version: ADVANCED_CONNECTOR_POLICIES_VERSION,
-			Inputs:  map[string]any{ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY: advancedConnector.Enabled.ValueBool()},
+		dto.RuleSets = append(dto.RuleSets, ppapi.PolicyRuleSetDto{
+			Id:      ppapi.ADVANCED_CONNECTOR_POLICIES_ONLY_ID,
+			Version: ppapi.ADVANCED_CONNECTOR_POLICIES_VERSION,
+			Inputs:  map[string]any{ppapi.ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY: advancedConnector.Enabled.ValueBool()},
 		})
 	}
 
@@ -807,15 +727,15 @@ func convertRulesModelToPolicyDto(ctx context.Context, model environmentGroupRul
 		if diags := obj.As(ctx, &makerWelcomeContent, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return dto, fmt.Errorf("failed to convert maker_welcome_content: %v", diags)
 		}
-		dto.RuleSets = append(dto.RuleSets, policyRuleSetDto{
-			Id:      MAKER_ONBOARDING_CONTENT_ID,
-			Version: MAKER_ONBOARDING_CONTENT_VERSION,
+		dto.RuleSets = append(dto.RuleSets, ppapi.PolicyRuleSetDto{
+			Id:      ppapi.MAKER_ONBOARDING_CONTENT_ID,
+			Version: ppapi.MAKER_ONBOARDING_CONTENT_VERSION,
 			Inputs: map[string]any{
-				MAKER_ONBOARDING_URL:              makerWelcomeContent.MakerOnboardingUrl.ValueString(),
-				MAKER_ONBOARDING_MARKDOWN:         makerWelcomeContent.MakerOnboardingMarkdown.ValueString(),
-				MAKER_ONBOARDING_PORTALS:          "",
-				MAKER_ONBOARDING_TIMESTAMP:        time.Now().UTC().Format(http.TimeFormat),
-				MAKER_ONBOARDING_CONSENT_REQUIRED: false,
+				ppapi.MAKER_ONBOARDING_URL:              makerWelcomeContent.MakerOnboardingUrl.ValueString(),
+				ppapi.MAKER_ONBOARDING_MARKDOWN:         makerWelcomeContent.MakerOnboardingMarkdown.ValueString(),
+				ppapi.MAKER_ONBOARDING_PORTALS:          "",
+				ppapi.MAKER_ONBOARDING_TIMESTAMP:        time.Now().UTC().Format(http.TimeFormat),
+				ppapi.MAKER_ONBOARDING_CONSENT_REQUIRED: false,
 			},
 		})
 	}
@@ -824,14 +744,14 @@ func convertRulesModelToPolicyDto(ctx context.Context, model environmentGroupRul
 }
 
 // policyRuleSetsOf returns the policy's rule sets, tolerating a nil policy.
-func policyRuleSetsOf(policy *ruleBasedPolicyDto) []policyRuleSetDto {
+func policyRuleSetsOf(policy *ppapi.RuleBasedPolicyDto) []ppapi.PolicyRuleSetDto {
 	if policy == nil {
 		return nil
 	}
 	return policy.RuleSets
 }
 
-func findPolicyRuleSet(ruleSets []policyRuleSetDto, id string) *policyRuleSetDto {
+func findPolicyRuleSet(ruleSets []ppapi.PolicyRuleSetDto, id string) *ppapi.PolicyRuleSetDto {
 	for i := range ruleSets {
 		if ruleSets[i].Id == id {
 			return &ruleSets[i]
@@ -840,21 +760,21 @@ func findPolicyRuleSet(ruleSets []policyRuleSetDto, id string) *policyRuleSetDto
 	return nil
 }
 
-func convertAdvancedConnectorPoliciesOnlyDtoToModel(ruleSets []policyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertAdvancedConnectorPoliciesOnlyDtoToModel(ruleSets []ppapi.PolicyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := map[string]attr.Type{"enabled": types.BoolType}
 
-	ruleSet := findPolicyRuleSet(ruleSets, ADVANCED_CONNECTOR_POLICIES_ONLY_ID)
+	ruleSet := findPolicyRuleSet(ruleSets, ppapi.ADVANCED_CONNECTOR_POLICIES_ONLY_ID)
 	if ruleSet == nil {
 		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), nil
 	}
 
-	enabledValue, ok := ruleSet.Inputs[ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY]
+	enabledValue, ok := ruleSet.Inputs[ppapi.ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY]
 	if !ok {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s input not found in response", ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s input not found in response", ppapi.ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY)
 	}
 	enabled, ok := enabledValue.(bool)
 	if !ok {
-		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s input is not a boolean", ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY)
+		return types.ObjectType{AttrTypes: attrType}, types.ObjectNull(attrType), fmt.Errorf("%s input is not a boolean", ppapi.ENABLE_ADVANCED_CONNECTOR_POLICIES_KEY)
 	}
 
 	return types.ObjectType{AttrTypes: attrType}, types.ObjectValueMust(attrType, map[string]attr.Value{"enabled": types.BoolValue(enabled)}), nil
@@ -913,47 +833,47 @@ func contentSecurityPolicyAttrTypes() map[string]attr.Type {
 	}
 }
 
-func convertContentSecurityPolicyModelToDto(ctx context.Context, objectValue basetypes.ObjectValue) (policyRuleSetDto, error) {
+func convertContentSecurityPolicyModelToDto(ctx context.Context, objectValue basetypes.ObjectValue) (ppapi.PolicyRuleSetDto, error) {
 	var csp environmentGroupRuleSetContentSecurityPolicyModel
 	if diags := objectValue.As(ctx, &csp, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-		return policyRuleSetDto{}, fmt.Errorf("failed to convert content_security_policy: %v", diags)
+		return ppapi.PolicyRuleSetDto{}, fmt.Errorf("failed to convert content_security_policy: %v", diags)
 	}
 
 	inputs := map[string]any{
-		CSP_IS_ENABLED_KEY:               csp.Enabled.ValueBool(),
-		CSP_IS_ENABLED_FOR_CANVAS_KEY:    csp.EnabledForCanvas.ValueBool(),
-		CSP_IS_ENABLED_FOR_CODE_APPS_KEY: csp.EnabledForCodeApps.ValueBool(),
-		CSP_OPTIONS_KEY:                  calculateCspOptions(csp.Configuration, csp.ConfigurationForCanvas),
-		CSP_REPORT_URI_KEY:               nil,
-		CSP_REPORTING_ENDPOINT_KEY:       nil,
+		ppapi.CSP_IS_ENABLED_KEY:               csp.Enabled.ValueBool(),
+		ppapi.CSP_IS_ENABLED_FOR_CANVAS_KEY:    csp.EnabledForCanvas.ValueBool(),
+		ppapi.CSP_IS_ENABLED_FOR_CODE_APPS_KEY: csp.EnabledForCodeApps.ValueBool(),
+		ppapi.CSP_OPTIONS_KEY:                  calculateCspOptions(csp.Configuration, csp.ConfigurationForCanvas),
+		ppapi.CSP_REPORT_URI_KEY:               nil,
+		ppapi.CSP_REPORTING_ENDPOINT_KEY:       nil,
 	}
 
 	if !csp.ReportUri.IsNull() && !csp.ReportUri.IsUnknown() {
-		inputs[CSP_REPORT_URI_KEY] = csp.ReportUri.ValueString()
+		inputs[ppapi.CSP_REPORT_URI_KEY] = csp.ReportUri.ValueString()
 	}
 	if !csp.ReportingEndpoint.IsNull() && !csp.ReportingEndpoint.IsUnknown() {
-		inputs[CSP_REPORTING_ENDPOINT_KEY] = csp.ReportingEndpoint.ValueString()
+		inputs[ppapi.CSP_REPORTING_ENDPOINT_KEY] = csp.ReportingEndpoint.ValueString()
 	}
 
 	configJson, err := convertCspConfigModelToJson(csp.Configuration)
 	if err != nil {
-		return policyRuleSetDto{}, fmt.Errorf("failed to convert configuration: %w", err)
+		return ppapi.PolicyRuleSetDto{}, fmt.Errorf("failed to convert configuration: %w", err)
 	}
-	inputs[CSP_CONFIGURATION_KEY] = configJson
+	inputs[ppapi.CSP_CONFIGURATION_KEY] = configJson
 
 	canvasJson, err := convertCspConfigModelToJson(csp.ConfigurationForCanvas)
 	if err != nil {
-		return policyRuleSetDto{}, fmt.Errorf("failed to convert configuration_for_canvas: %w", err)
+		return ppapi.PolicyRuleSetDto{}, fmt.Errorf("failed to convert configuration_for_canvas: %w", err)
 	}
-	inputs[CSP_CONFIGURATION_FOR_CANVAS_KEY] = canvasJson
+	inputs[ppapi.CSP_CONFIGURATION_FOR_CANVAS_KEY] = canvasJson
 
 	codeAppsJson, err := convertCspConfigModelToJson(csp.ConfigurationForCodeApps)
 	if err != nil {
-		return policyRuleSetDto{}, fmt.Errorf("failed to convert configuration_for_code_apps: %w", err)
+		return ppapi.PolicyRuleSetDto{}, fmt.Errorf("failed to convert configuration_for_code_apps: %w", err)
 	}
-	inputs[CSP_CONFIGURATION_FOR_CODE_APPS_KEY] = codeAppsJson
+	inputs[ppapi.CSP_CONFIGURATION_FOR_CODE_APPS_KEY] = codeAppsJson
 
-	return policyRuleSetDto{Id: CONTENT_SECURITY_POLICY_ID, Version: CONTENT_SECURITY_POLICY_VERSION, Inputs: inputs}, nil
+	return ppapi.PolicyRuleSetDto{Id: ppapi.CONTENT_SECURITY_POLICY_ID, Version: ppapi.CONTENT_SECURITY_POLICY_VERSION, Inputs: inputs}, nil
 }
 
 func getStrictCspFromConfig(configObj types.Object) bool {
@@ -1015,11 +935,11 @@ func convertCspConfigModelToJson(configObj types.Object) (string, error) {
 	return string(jsonBytes), nil
 }
 
-func convertContentSecurityPolicyDtoToModel(ruleSets []policyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertContentSecurityPolicyDtoToModel(ruleSets []ppapi.PolicyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := contentSecurityPolicyAttrTypes()
 	objType := types.ObjectType{AttrTypes: attrType}
 
-	ruleSet := findPolicyRuleSet(ruleSets, CONTENT_SECURITY_POLICY_ID)
+	ruleSet := findPolicyRuleSet(ruleSets, ppapi.CONTENT_SECURITY_POLICY_ID)
 	if ruleSet == nil {
 		return objType, types.ObjectNull(attrType), nil
 	}
@@ -1040,7 +960,7 @@ func convertContentSecurityPolicyDtoToModel(ruleSets []policyRuleSetDto) (basety
 	}
 
 	var options int64
-	switch n := inputs[CSP_OPTIONS_KEY].(type) {
+	switch n := inputs[ppapi.CSP_OPTIONS_KEY].(type) {
 	case float64:
 		options = int64(n)
 	case int64:
@@ -1055,30 +975,30 @@ func convertContentSecurityPolicyDtoToModel(ruleSets []policyRuleSetDto) (basety
 		return convertCspConfigJsonToModel(jsonStr, strict)
 	}
 
-	configValue, err := getConfig(CSP_CONFIGURATION_KEY, options&1 != 0)
+	configValue, err := getConfig(ppapi.CSP_CONFIGURATION_KEY, options&1 != 0)
 	if err != nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", CSP_CONFIGURATION_KEY, err)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", ppapi.CSP_CONFIGURATION_KEY, err)
 	}
-	canvasValue, err := getConfig(CSP_CONFIGURATION_FOR_CANVAS_KEY, options&8 != 0)
+	canvasValue, err := getConfig(ppapi.CSP_CONFIGURATION_FOR_CANVAS_KEY, options&8 != 0)
 	if err != nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", CSP_CONFIGURATION_FOR_CANVAS_KEY, err)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", ppapi.CSP_CONFIGURATION_FOR_CANVAS_KEY, err)
 	}
 
 	codeAppsValue := types.ObjectNull(cspDirectiveAttrTypes())
-	if jsonStr, ok := inputs[CSP_CONFIGURATION_FOR_CODE_APPS_KEY].(string); ok && jsonStr != "" && jsonStr != "{}" {
+	if jsonStr, ok := inputs[ppapi.CSP_CONFIGURATION_FOR_CODE_APPS_KEY].(string); ok && jsonStr != "" && jsonStr != "{}" {
 		attrValues, parseErr := parseCspConfigDirectives(jsonStr)
 		if parseErr != nil {
-			return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", CSP_CONFIGURATION_FOR_CODE_APPS_KEY, parseErr)
+			return objType, types.ObjectNull(attrType), fmt.Errorf("failed to parse %s: %w", ppapi.CSP_CONFIGURATION_FOR_CODE_APPS_KEY, parseErr)
 		}
 		codeAppsValue = types.ObjectValueMust(cspDirectiveAttrTypes(), attrValues)
 	}
 
 	attrValue := map[string]attr.Value{
-		"enabled":                     getBool(CSP_IS_ENABLED_KEY),
-		"enabled_for_canvas":          getBool(CSP_IS_ENABLED_FOR_CANVAS_KEY),
-		"enabled_for_code_apps":       getBool(CSP_IS_ENABLED_FOR_CODE_APPS_KEY),
-		"report_uri":                  getNullableString(CSP_REPORT_URI_KEY),
-		"reporting_endpoint":          getNullableString(CSP_REPORTING_ENDPOINT_KEY),
+		"enabled":                     getBool(ppapi.CSP_IS_ENABLED_KEY),
+		"enabled_for_canvas":          getBool(ppapi.CSP_IS_ENABLED_FOR_CANVAS_KEY),
+		"enabled_for_code_apps":       getBool(ppapi.CSP_IS_ENABLED_FOR_CODE_APPS_KEY),
+		"report_uri":                  getNullableString(ppapi.CSP_REPORT_URI_KEY),
+		"reporting_endpoint":          getNullableString(ppapi.CSP_REPORTING_ENDPOINT_KEY),
 		"configuration":               configValue,
 		"configuration_for_canvas":    canvasValue,
 		"configuration_for_code_apps": codeAppsValue,
@@ -1152,7 +1072,7 @@ func advancedConnectorPoliciesAttrTypes() map[string]attr.Type {
 	}
 }
 
-func convertConnectorManagementModelToDto(objectValue basetypes.ObjectValue) (policyRuleSetDto, error) {
+func convertConnectorManagementModelToDto(objectValue basetypes.ObjectValue) (ppapi.PolicyRuleSetDto, error) {
 	connectors := make([]allowedConnectorDto, 0)
 
 	if connList, ok := objectValue.Attributes()["allowed_connectors"].(types.List); ok && !connList.IsNull() && !connList.IsUnknown() {
@@ -1163,16 +1083,16 @@ func convertConnectorManagementModelToDto(objectValue basetypes.ObjectValue) (po
 			}
 			connector, err := convertAllowedConnectorModelToDto(objVal.Attributes())
 			if err != nil {
-				return policyRuleSetDto{}, err
+				return ppapi.PolicyRuleSetDto{}, err
 			}
 			connectors = append(connectors, connector)
 		}
 	}
 
-	return policyRuleSetDto{
-		Id:      CONNECTOR_MANAGEMENT_ID,
-		Version: CONNECTOR_MANAGEMENT_VERSION,
-		Inputs:  map[string]any{CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY: connectors},
+	return ppapi.PolicyRuleSetDto{
+		Id:      ppapi.CONNECTOR_MANAGEMENT_ID,
+		Version: ppapi.CONNECTOR_MANAGEMENT_VERSION,
+		Inputs:  map[string]any{ppapi.CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY: connectors},
 	}, nil
 }
 
@@ -1223,18 +1143,18 @@ func convertAllowedConnectorModelToDto(attrs map[string]attr.Value) (allowedConn
 	return connector, nil
 }
 
-func convertConnectorManagementDtoToModel(ruleSets []policyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
+func convertConnectorManagementDtoToModel(ruleSets []ppapi.PolicyRuleSetDto) (basetypes.ObjectType, basetypes.ObjectValue, error) {
 	attrType := advancedConnectorPoliciesAttrTypes()
 	objType := types.ObjectType{AttrTypes: attrType}
 	elemType := types.ObjectType{AttrTypes: allowedConnectorAttrTypes()}
 
-	ruleSet := findPolicyRuleSet(ruleSets, CONNECTOR_MANAGEMENT_ID)
+	ruleSet := findPolicyRuleSet(ruleSets, ppapi.CONNECTOR_MANAGEMENT_ID)
 	if ruleSet == nil {
 		return objType, types.ObjectNull(attrType), nil
 	}
 
 	// Inputs arrive as []any from JSON decoding; round-trip through JSON to get typed values.
-	rawList, ok := ruleSet.Inputs[CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY]
+	rawList, ok := ruleSet.Inputs[ppapi.CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY]
 	if !ok || rawList == nil {
 		return objType, types.ObjectValueMust(attrType, map[string]attr.Value{
 			"allowed_connectors": types.ListValueMust(elemType, []attr.Value{}),
@@ -1243,11 +1163,11 @@ func convertConnectorManagementDtoToModel(ruleSets []policyRuleSetDto) (basetype
 
 	rawJson, err := json.Marshal(rawList)
 	if err != nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to re-marshal %s: %w", CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY, err)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to re-marshal %s: %w", ppapi.CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY, err)
 	}
 	connectors := []allowedConnectorDto{}
 	if err := json.Unmarshal(rawJson, &connectors); err != nil {
-		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to unmarshal %s: %w", CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY, err)
+		return objType, types.ObjectNull(attrType), fmt.Errorf("failed to unmarshal %s: %w", ppapi.CONNECTOR_MANAGEMENT_ALLOWED_LIST_KEY, err)
 	}
 
 	elems := make([]attr.Value, 0, len(connectors))
