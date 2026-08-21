@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customtypes"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
@@ -358,7 +359,7 @@ func (r *TenantSettingsResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	r.TenantSettingClient = newTenantSettingsClient(providerClient.Api)
+	r.TenantSettingClient = bapi.NewClient(providerClient.Api)
 }
 
 func (r *TenantSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -413,7 +414,7 @@ func (r *TenantSettingsResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	stateDto, err := applyCorrections(ctx, plannedSettingsDto, *tenantSettingsDto)
+	stateDto, err := bapi.ApplyCorrections(ctx, plannedSettingsDto, *tenantSettingsDto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -465,7 +466,7 @@ func (r *TenantSettingsResource) Read(ctx context.Context, req resource.ReadRequ
 		resp.Diagnostics.AddError("Unable to Convert Tenant Settings Model to DTO in Read", err.Error())
 		return
 	}
-	newStateDto, err := applyCorrections(ctx, oldStateDto, *tenantSettings)
+	newStateDto, err := bapi.ApplyCorrections(ctx, oldStateDto, *tenantSettings)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -539,7 +540,7 @@ func (r *TenantSettingsResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// need to make corrections from what the API returns to match what terraform expects
-	filteredDto, err := applyCorrections(ctx, plannedDto, *updatedSettingsDto)
+	filteredDto, err := bapi.ApplyCorrections(ctx, plannedDto, *updatedSettingsDto)
 	if err != nil {
 		resp.Diagnostics.AddError("Error applying corrections to tenant settings", err.Error())
 		return
@@ -579,7 +580,7 @@ func (r *TenantSettingsResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	var originalSettings tenantSettingsDto
+	var originalSettings bapi.TenantSettingsDto
 	err2 := json.Unmarshal(previousBytes, &originalSettings)
 	if err2 != nil {
 		resp.Diagnostics.AddError(
@@ -589,7 +590,7 @@ func (r *TenantSettingsResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	correctedDto, err := applyCorrections(ctx, stateDto, originalSettings)
+	correctedDto, err := bapi.ApplyCorrections(ctx, stateDto, originalSettings)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error applying corrections", fmt.Sprintf("Error applying corrections: %s", err.Error()),

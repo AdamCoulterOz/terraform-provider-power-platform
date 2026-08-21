@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package tenant_settings
+package bapi
 
 import (
 	"context"
@@ -12,43 +12,14 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-func newTenantSettingsClient(apiClient *api.Client) client {
-	return client{
-		Api: apiClient,
-	}
-}
-
-type client struct {
-	Api *api.Client
-}
-
-func (client *client) GetTenant(ctx context.Context) (*tenantDto, error) {
+// GetTenantSettings reads the current tenant settings.
+func (client *Client) GetTenantSettings(ctx context.Context) (*TenantSettingsDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
-		Path:   "/providers/Microsoft.BusinessAppPlatform/tenant",
-	}
-
-	values := url.Values{}
-	values.Add(constants.API_VERSION_PARAM, constants.TENANT_SETTINGS_API_VERSION)
-	apiUrl.RawQuery = values.Encode()
-
-	tenant := tenantDto{}
-	_, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &tenant)
-	if err != nil {
-		return nil, err
-	}
-	return &tenant, nil
-}
-
-func (client *client) GetTenantSettings(ctx context.Context) (*tenantSettingsDto, error) {
-	apiUrl := &url.URL{
-		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   "/providers/Microsoft.BusinessAppPlatform/listTenantSettings",
 	}
 
@@ -56,18 +27,20 @@ func (client *client) GetTenantSettings(ctx context.Context) (*tenantSettingsDto
 	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
-	tenantSettings := tenantSettingsDto{}
-	_, err := client.Api.Execute(ctx, nil, "POST", apiUrl.String(), nil, nil, []int{http.StatusOK}, &tenantSettings)
+	tenantSettings := TenantSettingsDto{}
+	_, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, nil, []int{http.StatusOK}, &tenantSettings)
 	if err != nil {
 		return nil, err
 	}
 	return &tenantSettings, nil
 }
 
-func (client *client) UpdateTenantSettings(ctx context.Context, tenantSettings tenantSettingsDto) (*tenantSettingsDto, error) {
+// UpdateTenantSettings updates the tenant settings and returns the settings
+// the API reports back.
+func (client *Client) UpdateTenantSettings(ctx context.Context, tenantSettings TenantSettingsDto) (*TenantSettingsDto, error) {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   "/providers/Microsoft.BusinessAppPlatform/scopes/admin/updateTenantSettings",
 	}
 
@@ -75,17 +48,20 @@ func (client *client) UpdateTenantSettings(ctx context.Context, tenantSettings t
 	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
-	var backendSettings tenantSettingsDto
-	_, err := client.Api.Execute(ctx, nil, "POST", apiUrl.String(), nil, tenantSettings, []int{http.StatusOK}, &backendSettings)
+	var backendSettings TenantSettingsDto
+	_, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl.String(), nil, tenantSettings, []int{http.StatusOK}, &backendSettings)
 	if err != nil {
 		return nil, err
 	}
 	return &backendSettings, nil
 }
 
-func applyCorrections(ctx context.Context, planned tenantSettingsDto, actual tenantSettingsDto) (*tenantSettingsDto, error) {
+// ApplyCorrections filters the settings returned by the API down to the
+// fields opted in by the planned settings, and restores zero-UUID routing
+// target ids that the API reports back as null.
+func ApplyCorrections(ctx context.Context, planned TenantSettingsDto, actual TenantSettingsDto) (*TenantSettingsDto, error) {
 	correctedFilter := filterDto(ctx, planned, actual)
-	corrected, ok := correctedFilter.(*tenantSettingsDto)
+	corrected, ok := correctedFilter.(*TenantSettingsDto)
 	if !ok {
 		tflog.Error(ctx, "Type assertion failed in applyCorrections")
 		return nil, errors.New("type assertion to *tenantSettingsDto failed in applyCorrections")

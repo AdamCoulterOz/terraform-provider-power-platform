@@ -6,13 +6,14 @@ package tenant_settings
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customtypes"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type TenantSettingsDataSource struct {
 	helpers.TypeInfo
-	TenantSettingsClient client
+	TenantSettingsClient *bapi.Client
 }
 
 type TenantSettingsDataSourceModel struct {
@@ -138,5 +139,5 @@ type UserManagementSettings struct {
 
 type TenantSettingsResource struct {
 	helpers.TypeInfo
-	TenantSettingClient client
+	TenantSettingClient *bapi.Client
 }
