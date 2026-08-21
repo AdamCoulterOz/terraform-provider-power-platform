@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -127,8 +128,8 @@ type SecuritySourceModel struct {
 
 func convertFromEnvironmentSettingsModel(ctx context.Context, environmentSettingsModel EnvironmentSettingsResourceModel) (*environmentSettings, error) {
 	environmentSettings := &environmentSettings{
-		BackendSettings: &environmentBackendSettingsValueDto{},
-		OrgSettings:     &environmentOrgSettingsDto{},
+		BackendSettings: &dataverse.EnvironmentBackendSettingsValueDto{},
+		OrgSettings:     &dataverse.EnvironmentOrgSettingsDto{},
 	}
 
 	auditSettingsObject := environmentSettingsModel.AuditAndLogs.Attributes()["audit_settings"]
@@ -195,7 +196,7 @@ func convertFromEnvironmentSettingsModel(ctx context.Context, environmentSetting
 	return environmentSettings, nil
 }
 
-func convertFromEnvironmentEmailSettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *environmentOrgSettingsDto) error {
+func convertFromEnvironmentEmailSettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *dataverse.EnvironmentOrgSettingsDto) error {
 	emailSettingsObject := environmentSettings.Email.Attributes()["email_settings"]
 	if emailSettingsObject != nil && helpers.IsKnown(emailSettingsObject) {
 		objectValue, ok := emailSettingsObject.(basetypes.ObjectValue)
@@ -218,7 +219,7 @@ func convertFromEnvironmentEmailSettings(ctx context.Context, environmentSetting
 	return nil
 }
 
-func convertFromEnvironmentPrivacyAndSecuritySettings(_ context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *environmentOrgSettingsDto) error {
+func convertFromEnvironmentPrivacyAndSecuritySettings(_ context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *dataverse.EnvironmentOrgSettingsDto) error {
 	privacyAndSecurity := environmentSettings.PrivacyAndSecurity
 	if privacyAndSecurity.IsNull() || privacyAndSecurity.IsUnknown() {
 		return nil
@@ -243,7 +244,7 @@ func convertFromEnvironmentPrivacyAndSecuritySettings(_ context.Context, environ
 	return nil
 }
 
-func convertFromEnvironmentBehaviorSettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *environmentOrgSettingsDto) error {
+func convertFromEnvironmentBehaviorSettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *dataverse.EnvironmentOrgSettingsDto) error {
 	behaviorSettings := environmentSettings.Product.Attributes()["behavior_settings"]
 	if behaviorSettings != nil && helpers.IsKnown(behaviorSettings) {
 		var behaviorSettingsSourceModel BehaviorSettingsSourceModel
@@ -260,11 +261,11 @@ func convertFromEnvironmentBehaviorSettings(ctx context.Context, environmentSett
 
 func convertFromEnvironmentFeatureSettings(ctx context.Context, environmentSettingsModel EnvironmentSettingsResourceModel, environmentSettings *environmentSettings) error {
 	if environmentSettings.OrgSettings == nil {
-		environmentSettings.OrgSettings = &environmentOrgSettingsDto{}
+		environmentSettings.OrgSettings = &dataverse.EnvironmentOrgSettingsDto{}
 	}
 	if environmentSettings.BackendSettings == nil {
-		environmentSettings.BackendSettings = &environmentBackendSettingsValueDto{
-			SettingDetailCollection: []environmentBackendSettingDto{},
+		environmentSettings.BackendSettings = &dataverse.EnvironmentBackendSettingsValueDto{
+			SettingDetailCollection: []dataverse.EnvironmentBackendSettingDto{},
 		}
 	}
 
@@ -284,7 +285,7 @@ func convertFromEnvironmentFeatureSettings(ctx context.Context, environmentSetti
 	return nil
 }
 
-func convertOrgFeatureSettings(featuresSourceModel FeaturesSourceModel, orgSettings *environmentOrgSettingsDto) {
+func convertOrgFeatureSettings(featuresSourceModel FeaturesSourceModel, orgSettings *dataverse.EnvironmentOrgSettingsDto) {
 	if helpers.IsKnown(featuresSourceModel.PowerAppsComponentFrameworkForCanvasApps) {
 		orgSettings.PowerAppsComponentFrameworkForCanvasApps = featuresSourceModel.PowerAppsComponentFrameworkForCanvasApps.ValueBoolPointer()
 	}
@@ -323,7 +324,7 @@ func convertOrgFeatureSettings(featuresSourceModel FeaturesSourceModel, orgSetti
 	}
 }
 
-func convertBackendFeatureSettings(featuresSourceModel FeaturesSourceModel, backendSettings *environmentBackendSettingsValueDto) error {
+func convertBackendFeatureSettings(featuresSourceModel FeaturesSourceModel, backendSettings *dataverse.EnvironmentBackendSettingsValueDto) error {
 	if helpers.IsKnown(featuresSourceModel.EnableCopilotAnswerControl) {
 		if err := backendSettings.SetValue(EnableCopilotAnswerControl, featuresSourceModel.EnableCopilotAnswerControl.ValueBool()); err != nil {
 			return err
@@ -368,7 +369,7 @@ func convertBackendFeatureSettings(featuresSourceModel FeaturesSourceModel, back
 	return nil
 }
 
-func convertFromEnvironmentSecuritySettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *environmentOrgSettingsDto) error {
+func convertFromEnvironmentSecuritySettings(ctx context.Context, environmentSettings EnvironmentSettingsResourceModel, environmentSettingsDto *dataverse.EnvironmentOrgSettingsDto) error {
 	security := environmentSettings.Product.Attributes()["security"]
 	if security != nil && helpers.IsKnown(security) {
 		var securitySourceModel SecuritySourceModel
