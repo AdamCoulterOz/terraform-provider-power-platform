@@ -5,12 +5,13 @@ package capacity
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type DataSource struct {
 	helpers.TypeInfo
-	CapacityClient client
+	CapacityClient *ppapi.Client
 }
 
 type DataSourceModel struct {

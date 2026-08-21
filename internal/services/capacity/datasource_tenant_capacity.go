@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -127,7 +128,7 @@ func (d *DataSource) Configure(ctx context.Context, req datasource.ConfigureRequ
 		return
 	}
 
-	d.CapacityClient = newCapacityClient(client.Api)
+	d.CapacityClient = ppapi.NewClient(client.Api)
 }
 
 func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

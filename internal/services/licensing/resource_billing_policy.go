@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/ppapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -156,8 +157,8 @@ func (r *BillingPolicyResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	billingPolicyToCreate := billingPolicyCreateDto{
-		BillingInstrument: BillingInstrumentDto{
+	billingPolicyToCreate := ppapi.BillingPolicyCreateDto{
+		BillingInstrument: ppapi.BillingInstrumentDto{
 			ResourceGroup:  plan.BillingInstrument.ResourceGroup.ValueString(),
 			SubscriptionId: plan.BillingInstrument.SubscriptionId.ValueString(),
 		},
@@ -241,7 +242,7 @@ func (r *BillingPolicyResource) Update(ctx context.Context, req resource.UpdateR
 
 	if plan.Name.ValueString() != state.Name.ValueString() ||
 		plan.Status.ValueString() != state.Status.ValueString() {
-		policyToUpdate := BillingPolicyUpdateDto{
+		policyToUpdate := ppapi.BillingPolicyUpdateDto{
 			Name:   plan.Name.ValueString(),
 			Status: plan.Status.ValueString(),
 		}
