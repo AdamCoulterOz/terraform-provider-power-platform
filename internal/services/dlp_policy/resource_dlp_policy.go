@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -335,9 +336,9 @@ func (r *DataLossPreventionPolicyResource) Create(ctx context.Context, req resou
 		DefaultConnectorsClassification:      plan.DefaultConnectorsClassification.ValueString(),
 		DisplayName:                          plan.DisplayName.ValueString(),
 		EnvironmentType:                      plan.EnvironmentType.ValueString(),
-		Environments:                         []dlpEnvironmentDto{},
+		Environments:                         []bapi.DlpEnvironmentDto{},
 		ConnectorGroups:                      []dlpConnectorGroupsModelDto{},
-		CustomConnectorUrlPatternsDefinition: []dlpConnectorUrlPatternsDefinitionDto{},
+		CustomConnectorUrlPatternsDefinition: []bapi.DlpConnectorUrlPatternsDefinitionDto{},
 	}
 
 	environments, err := convertToDlpEnvironment(ctx, plan.Environments)
@@ -414,7 +415,7 @@ func (r *DataLossPreventionPolicyResource) Update(ctx context.Context, req resou
 		DisplayName:                     plan.DisplayName.ValueString(),
 		EnvironmentType:                 plan.EnvironmentType.ValueString(),
 		DefaultConnectorsClassification: plan.DefaultConnectorsClassification.ValueString(),
-		Environments:                    []dlpEnvironmentDto{},
+		Environments:                    []bapi.DlpEnvironmentDto{},
 		ConnectorGroups:                 []dlpConnectorGroupsModelDto{},
 	}
 
