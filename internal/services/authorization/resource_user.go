@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -179,7 +180,7 @@ func (r *UserResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 	tflog.Debug(ctx, fmt.Sprintf("Dataverse exists in environment: %t", hasEnvDataverse))
 
-	newUser := userDto{}
+	newUser := dataverse.UserDto{}
 	if hasEnvDataverse {
 		user, err := r.UserClient.CreateDataverseUser(ctx, plan.EnvironmentId.ValueString(), plan.AadId.ValueString())
 		if err != nil {
@@ -265,7 +266,7 @@ func (r *UserResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 	tflog.Debug(ctx, fmt.Sprintf("Dataverse exists in environment: %t", hasEnvDataverse))
 
-	updateUser := userDto{}
+	updateUser := dataverse.UserDto{}
 	if hasEnvDataverse {
 		user, err := r.UserClient.GetDataverseUserByAadObjectId(ctx, state.EnvironmentId.ValueString(), state.AadId.ValueString())
 		if err != nil {
@@ -370,7 +371,7 @@ func (r *UserResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	tflog.Debug(ctx, fmt.Sprintf("Dataverse exists in environment: %t", hasEnvDataverse))
 
 	addedSecurityRoles, removedSecurityRoles := helpers.ArrayDiff(plan.SecurityRoles, state.SecurityRoles)
-	user := userDto{}
+	user := dataverse.UserDto{}
 	if hasEnvDataverse {
 		if len(addedSecurityRoles) > 0 {
 			userDto, err := r.UserClient.AddDataverseSecurityRoles(ctx, plan.EnvironmentId.ValueString(), state.Id.ValueString(), addedSecurityRoles)
@@ -402,7 +403,7 @@ func (r *UserResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			user = *userDto
 		}
 		if len(removedSecurityRoles) > 0 {
-			savedRoles := []securityRoleDto{}
+			savedRoles := []dataverse.SecurityRoleDto{}
 			rolesObj, diagErr := resp.Private.GetKey(ctx, "role")
 			if diagErr.HasError() {
 				resp.Diagnostics.AddError(fmt.Sprintf("Error when updating %s", r.FullTypeName()), err.Error())
@@ -484,7 +485,7 @@ func (r *UserResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			tflog.Debug(ctx, fmt.Sprintf("Disable delete is set to false. Skipping delete of systemuser with id %s", state.Id.ValueString()))
 		}
 	} else {
-		savedRoles := []securityRoleDto{}
+		savedRoles := []dataverse.SecurityRoleDto{}
 		rolesObj, diagErr := resp.Private.GetKey(ctx, "role")
 		if diagErr.HasError() {
 			return

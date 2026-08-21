@@ -8,8 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
-	stdpath "path"
 	"regexp"
 	"strings"
 
@@ -27,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -448,7 +447,7 @@ func validateAddressSlots(addresses []AddressModel) (diags diag.Diagnostics) {
 	return diags
 }
 
-func setResourceModelFromDto(model *ResourceModel, environmentId string, publisher *publisherDto) {
+func setResourceModelFromDto(model *ResourceModel, environmentId string, publisher *dataverse.PublisherDto) {
 	existingAddresses := model.Address
 	existingDescription := model.Description
 	existingEmailAddress := model.EmailAddress
@@ -514,7 +513,7 @@ func publisherBodyFromModel(model *ResourceModel) map[string]any {
 	return body
 }
 
-func addressModelsFromDto(publisher *publisherDto, existing []AddressModel) []AddressModel {
+func addressModelsFromDto(publisher *dataverse.PublisherDto, existing []AddressModel) []AddressModel {
 	var addresses []AddressModel
 
 	if address1 := addressModelFromDtoWithExisting(1, publisher, findAddressBySlot(existing, 1)); address1 != nil {
@@ -538,7 +537,7 @@ func addressModelsFromDto(publisher *publisherDto, existing []AddressModel) []Ad
 	return addresses
 }
 
-func addressModelFromDto(slot int64, publisher *publisherDto) *AddressModel {
+func addressModelFromDto(slot int64, publisher *dataverse.PublisherDto) *AddressModel {
 	if publisher == nil {
 		return nil
 	}
@@ -626,7 +625,7 @@ func addressModelFromDto(slot int64, publisher *publisherDto) *AddressModel {
 	return &model
 }
 
-func addressModelFromDtoWithExisting(slot int64, publisher *publisherDto, existing *AddressModel) *AddressModel {
+func addressModelFromDtoWithExisting(slot int64, publisher *dataverse.PublisherDto, existing *AddressModel) *AddressModel {
 	model := addressModelFromDto(slot, publisher)
 	if model == nil || existing == nil {
 		return model
@@ -711,37 +710,6 @@ func isDefaultOrNullInt64(value types.Int64, defaultValue int64) bool {
 
 func buildPublisherImportId(environmentId, publisherId string) string {
 	return fmt.Sprintf("%s_%s", environmentId, publisherId)
-}
-
-func getPublisherIdFromResponse(resp *api.Response) (string, error) {
-	var entityId string
-	for headerName, values := range resp.HttpResponse.Header {
-		if strings.EqualFold(headerName, "OData-EntityId") && len(values) > 0 {
-			entityId = values[0]
-			break
-		}
-	}
-	if entityId == "" {
-		return "", errors.New("no publisher id returned from the API")
-	}
-
-	parsed, err := url.Parse(entityId)
-	if err != nil {
-		return "", err
-	}
-
-	entitySegment := stdpath.Base(parsed.Path)
-	publisherId, found := strings.CutPrefix(entitySegment, "publishers(")
-	if !found {
-		return "", errors.New("no publisher id returned from the API")
-	}
-
-	publisherId = strings.TrimSuffix(publisherId, ")")
-	if !canonicalGuidRegex.MatchString(publisherId) {
-		return "", errors.New("no publisher id returned from the API")
-	}
-
-	return publisherId, nil
 }
 
 func nullableStringValue(value string) types.String {

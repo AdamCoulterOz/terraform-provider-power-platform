@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -254,7 +255,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
 }
 
-func setPublisherModelFromDto(model *DataSourceModel, environmentId string, publisher *publisherDto) {
+func setPublisherModelFromDto(model *DataSourceModel, environmentId string, publisher *dataverse.PublisherDto) {
 	model.Id = types.StringValue(publisher.Id)
 	model.EnvironmentId = types.StringValue(environmentId)
 	model.UniqueName = types.StringValue(publisher.UniqueName)
