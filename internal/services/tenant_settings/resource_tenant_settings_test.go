@@ -145,7 +145,7 @@ func TestUnitTestTenantSettingsResource_Validate_Create(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/tenant?api-version=2020-08-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/tenant?api-version=2021-04-01",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resources/Validate_Create/get_tenant.json").String()), nil
 		})
@@ -543,7 +543,7 @@ func TestUnitTestTenantSettingsResource_Validate_Update(t *testing.T) {
 	updateSettingsResponseCount := 0
 	listSettingsResponseCount := 0
 
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/tenant?api-version=2020-08-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/tenant?api-version=2021-04-01",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(http.StatusOK, httpmock.File("tests/resources/Validate_Create/get_tenant.json").String()), nil
 		})
