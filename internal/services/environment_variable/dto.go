@@ -3,42 +3,14 @@
 
 package environmentvariable
 
-type environmentVariableDefinitionArrayDto struct {
-	Value []environmentVariableDefinitionDto `json:"value"`
-}
+import (
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/dataverse"
+)
 
-type environmentVariableDefinitionDto struct {
-	EnvironmentVariableDefinitionId string `json:"environmentvariabledefinitionid"`
-	SchemaName                      string `json:"schemaname"`
-	DisplayName                     string `json:"displayname"`
-	Description                     string `json:"description"`
-	DefaultValue                    string `json:"defaultvalue"`
-	Type                            int64  `json:"type"`
-	ValueSchema                     string `json:"valueschema"`
-	SecretStore                     int64  `json:"secretstore"`
-}
-
-type environmentVariableValueArrayDto struct {
-	Value []environmentVariableValueDto `json:"value"`
-}
-
-type environmentVariableValueDto struct {
-	EnvironmentVariableValueId string `json:"environmentvariablevalueid"`
-	SchemaName                 string `json:"schemaname"`
-	Value                      string `json:"value"`
-}
-
-type createEnvironmentVariableValueDto struct {
-	SchemaName                            string `json:"schemaname"`
-	Value                                 string `json:"value"`
-	EnvironmentVariableDefinitionODataRef string `json:"environmentvariabledefinitionid@odata.bind"`
-}
-
-type updateEnvironmentVariableValueDto struct {
-	Value string `json:"value"`
-}
-
+// resolvedEnvironmentVariableDto pairs an environment variable definition with
+// its current value record (nil when no value is set). It is a service-side
+// composite, not a wire shape.
 type resolvedEnvironmentVariableDto struct {
-	Definition environmentVariableDefinitionDto
-	Value      *environmentVariableValueDto
+	Definition dataverse.EnvironmentVariableDefinitionDto
+	Value      *dataverse.EnvironmentVariableValueDto
 }

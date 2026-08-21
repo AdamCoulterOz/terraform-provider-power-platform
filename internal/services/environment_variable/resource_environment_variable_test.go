@@ -281,7 +281,7 @@ func TestUnitEnvironmentVariableResource_Validate_Create_Fails_When_No_Dataverse
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
 		httpmock.NewStringResponder(http.StatusOK, httpmock.File("tests/resource/Validate_Create_Fails_When_No_Dataverse/get_environment.json").String()))
 
 	resource.Test(t, resource.TestCase{
@@ -481,7 +481,7 @@ func registerEnvironmentVariableUpdateResponders() {
 }
 
 func registerEnvironmentResponder() {
-	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy&api-version=2023-06-01",
+	httpmock.RegisterResponder("GET", "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/00000000-0000-0000-0000-000000000001?%24expand=permissions%2Cproperties.capacity%2Cproperties%2FbillingPolicy%2Cproperties%2FcopilotPolicies&api-version=2023-06-01",
 		httpmock.NewStringResponder(http.StatusOK, httpmock.File("tests/resource/Validate_Create_HappyPath/get_environment.json").String()))
 }
 
