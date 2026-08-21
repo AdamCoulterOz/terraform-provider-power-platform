@@ -705,7 +705,7 @@ func TestUnitDisasterRecoveryResource_Validate_Read_ParentDeleted(t *testing.T) 
 			},
 			{
 				// Step 2: refresh when the parent environment has been deleted out-of-band.
-				// GetDisasterRecoveryState returns 404; the provider detects the parent is gone
+				// The environment read returns 404; the provider detects the parent is gone
 				// and removes the resource from state.
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,

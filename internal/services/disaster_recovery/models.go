@@ -12,7 +12,7 @@ import (
 
 type DisasterRecoveryResource struct {
 	helpers.TypeInfo
-	client client
+	client *bapi.Client
 }
 
 type DisasterRecoveryResourceModel struct {

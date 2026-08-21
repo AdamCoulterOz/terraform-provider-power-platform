@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
@@ -65,7 +66,7 @@ func (r *DisasterRecoveryResource) Configure(ctx context.Context, req resource.C
 		)
 		return
 	}
-	r.client = newDisasterRecoveryClient(providerClient.Api)
+	r.client = bapi.NewClient(providerClient.Api)
 }
 
 func (r *DisasterRecoveryResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -136,7 +137,7 @@ func (r *DisasterRecoveryResource) Create(ctx context.Context, req resource.Crea
 		}
 	}
 
-	env, err := r.client.GetDisasterRecoveryState(ctx, environmentId)
+	env, err := r.client.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment '%s' after disaster recovery operation", environmentId), err.Error())
 		return
@@ -160,14 +161,14 @@ func (r *DisasterRecoveryResource) Read(ctx context.Context, req resource.ReadRe
 
 	environmentId := state.EnvironmentId.ValueString()
 
-	env, err := r.client.GetDisasterRecoveryState(ctx, environmentId)
+	env, err := r.client.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		// For ambiguous errors, check whether the parent environment still exists.
-		_, envErr := r.client.environmentClient.GetEnvironment(ctx, environmentId)
+		_, envErr := r.client.GetEnvironment(ctx, environmentId)
 		if errors.Is(envErr, customerrors.ErrObjectNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
@@ -209,7 +210,7 @@ func (r *DisasterRecoveryResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	env, err := r.client.GetDisasterRecoveryState(ctx, environmentId)
+	env, err := r.client.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Client error when reading environment '%s' after disaster recovery update", environmentId), err.Error())
 		return
@@ -233,7 +234,7 @@ func (r *DisasterRecoveryResource) Delete(ctx context.Context, req resource.Dele
 
 	environmentId := state.EnvironmentId.ValueString()
 
-	env, err := r.client.GetDisasterRecoveryState(ctx, environmentId)
+	env, err := r.client.GetEnvironment(ctx, environmentId)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrObjectNotFound) {
 			return

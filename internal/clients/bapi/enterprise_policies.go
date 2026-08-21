@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package enterprise_policy
+package bapi
 
 import (
 	"context"
@@ -11,27 +11,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
-
-func newEnterprisePolicyClient(apiClient *api.Client) Client {
-	return Client{
-		Api:               apiClient,
-		EnvironmentClient: bapi.NewClient(apiClient),
-	}
-}
-
-type Client struct {
-	Api               *api.Client
-	EnvironmentClient *bapi.Client
-}
 
 // buildEnterprisePolicyURL builds the URL for enterprise policy operations.
 func (client *Client) buildEnterprisePolicyURL(environmentId, environmentType, action string) string {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/environments/%s/enterprisePolicies/%s/%s", environmentId, environmentType, action),
 	}
 
@@ -46,11 +33,11 @@ func (client *Client) buildEnterprisePolicyURL(environmentId, environmentType, a
 func (client *Client) executePolicyOperation(ctx context.Context, environmentId, environmentType, systemId, action string) error {
 	apiUrl := client.buildEnterprisePolicyURL(environmentId, environmentType, action)
 
-	linkEnterprosePolicyDto := linkEnterprosePolicyDto{
+	linkEnterprosePolicyDto := LinkEnterprisePolicyDto{
 		SystemId: systemId,
 	}
 
-	apiResponse, err := client.Api.Execute(ctx, nil, "POST", apiUrl, nil, linkEnterprosePolicyDto, []int{http.StatusAccepted, http.StatusConflict}, nil)
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "POST", apiUrl, nil, linkEnterprosePolicyDto, []int{http.StatusAccepted, http.StatusConflict}, nil)
 	if err != nil {
 		return err
 	}
@@ -72,10 +59,14 @@ func (client *Client) executePolicyOperation(ctx context.Context, environmentId,
 	return nil
 }
 
+// LinkEnterprisePolicy links an enterprise policy to an environment and waits
+// for the link lifecycle operation to finish.
 func (client *Client) LinkEnterprisePolicy(ctx context.Context, environmentId, environmentType, systemId string) error {
 	return client.executePolicyOperation(ctx, environmentId, environmentType, systemId, "link")
 }
 
+// UnLinkEnterprisePolicy unlinks an enterprise policy from an environment and
+// waits for the unlink lifecycle operation to finish.
 func (client *Client) UnLinkEnterprisePolicy(ctx context.Context, environmentId, environmentType, systemId string) error {
 	return client.executePolicyOperation(ctx, environmentId, environmentType, systemId, "unlink")
 }

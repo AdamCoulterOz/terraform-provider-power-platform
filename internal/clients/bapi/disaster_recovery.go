@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package disaster_recovery
+package bapi
 
 import (
 	"context"
@@ -11,44 +11,35 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-func newDisasterRecoveryClient(apiClient *api.Client) client {
-	return client{
-		Api:               apiClient,
-		environmentClient: bapi.NewClient(apiClient),
-	}
-}
-
-type client struct {
-	Api               *api.Client
-	environmentClient *bapi.Client
-}
-
-func (client *client) EnableDisasterRecovery(ctx context.Context, environmentId string) error {
+// EnableDisasterRecovery enables cross-region disaster recovery for an
+// environment and waits for the lifecycle operation to finish.
+func (client *Client) EnableDisasterRecovery(ctx context.Context, environmentId string) error {
 	return client.setDisasterRecoveryWithRetry(ctx, environmentId, "Enabled", 0)
 }
 
-func (client *client) DisableDisasterRecovery(ctx context.Context, environmentId string) error {
+// DisableDisasterRecovery disables cross-region disaster recovery for an
+// environment and waits for the lifecycle operation to finish.
+func (client *Client) DisableDisasterRecovery(ctx context.Context, environmentId string) error {
 	return client.setDisasterRecoveryWithRetry(ctx, environmentId, "Disabled", 0)
 }
 
-func (client *client) setDisasterRecoveryWithRetry(ctx context.Context, environmentId, state string, retryCount int) error {
+func (client *Client) setDisasterRecoveryWithRetry(ctx context.Context, environmentId, state string, retryCount int) error {
 	apiUrl := &url.URL{
 		Scheme: constants.HTTPS,
-		Host:   client.Api.GetConfig().Urls.BapiUrl,
+		Host:   client.host(),
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
 	}
 	values := url.Values{}
 	values.Add(constants.API_VERSION_PARAM, constants.BAP_2021_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
-	body := disasterRecoveryPatchDto{
-		Properties: disasterRecoveryPatchPropertiesDto{
-			States: disasterRecoveryPatchStatesDto{
-				DisasterRecovery: bapi.DisasterRecoveryStateDto{
+	body := DisasterRecoveryPatchDto{
+		Properties: DisasterRecoveryPatchPropertiesDto{
+			States: DisasterRecoveryPatchStatesDto{
+				DisasterRecovery: DisasterRecoveryStateDto{
 					Id: state,
 				},
 			},
@@ -57,7 +48,7 @@ func (client *client) setDisasterRecoveryWithRetry(ctx context.Context, environm
 
 	tflog.Debug(ctx, fmt.Sprintf("Setting Disaster Recovery to '%s' for environment '%s'", state, environmentId))
 
-	apiResponse, err := client.Api.Execute(ctx, nil, "PATCH", apiUrl.String(), nil, body, []int{http.StatusAccepted, http.StatusConflict}, nil)
+	apiResponse, err := client.Api.Execute(ctx, client.scopes(), "PATCH", apiUrl.String(), nil, body, []int{http.StatusAccepted, http.StatusConflict}, nil)
 	if err != nil {
 		return err
 	}
@@ -82,8 +73,4 @@ func (client *client) setDisasterRecoveryWithRetry(ctx context.Context, environm
 	}
 
 	return nil
-}
-
-func (client *client) GetDisasterRecoveryState(ctx context.Context, environmentId string) (*bapi.EnvironmentDto, error) {
-	return client.environmentClient.GetEnvironment(ctx, environmentId)
 }
