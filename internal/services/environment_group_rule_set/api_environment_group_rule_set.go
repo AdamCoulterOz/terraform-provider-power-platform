@@ -10,13 +10,13 @@ import (
 	"net/url"
 
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
-func NewEnvironmentGroupRuleSetClient(apiClient *api.Client, tenantClient tenant.Client) Client {
+func NewEnvironmentGroupRuleSetClient(apiClient *api.Client, tenantClient *bapi.Client) Client {
 	return Client{
 		Api:       apiClient,
 		TenantApi: tenantClient,
@@ -25,7 +25,7 @@ func NewEnvironmentGroupRuleSetClient(apiClient *api.Client, tenantClient tenant
 
 type Client struct {
 	Api       *api.Client
-	TenantApi tenant.Client
+	TenantApi *bapi.Client
 }
 
 func (client *Client) GetEnvironmentGroupRuleSet(ctx context.Context, environmentGroupId string) (*EnvironmentGroupRuleSetValueSetDto, error) {

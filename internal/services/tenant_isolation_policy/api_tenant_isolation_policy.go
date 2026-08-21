@@ -14,11 +14,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
-func NewTenantIsolationPolicyClient(apiClient *api.Client, tenantClient tenant.Client) Client {
+func NewTenantIsolationPolicyClient(apiClient *api.Client, tenantClient *bapi.Client) Client {
 	return Client{
 		Api:       apiClient,
 		TenantApi: tenantClient,
@@ -27,7 +27,7 @@ func NewTenantIsolationPolicyClient(apiClient *api.Client, tenantClient tenant.C
 
 type Client struct {
 	Api       *api.Client
-	TenantApi tenant.Client
+	TenantApi *bapi.Client
 }
 
 // getTenantIsolationPolicy retrieves the tenant isolation policy for the specified tenant.

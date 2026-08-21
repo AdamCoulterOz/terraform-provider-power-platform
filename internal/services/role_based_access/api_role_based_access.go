@@ -13,9 +13,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 const apiVersion = "2024-10-01"
@@ -26,13 +26,13 @@ var scopePropagationErrorCodes = []string{"EnvironmentIdInvalid", "EnvironmentGr
 func newRoleBasedAccessClient(apiClient *api.Client) client {
 	return client{
 		Api:       apiClient,
-		TenantApi: tenant.NewTenantClient(apiClient),
+		TenantApi: bapi.NewClient(apiClient),
 	}
 }
 
 type client struct {
 	Api       *api.Client
-	TenantApi tenant.Client
+	TenantApi *bapi.Client
 }
 
 // tenantScope returns the fully qualified tenant scope string required by the RBAC API.

@@ -16,10 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/environment_group_rule_set"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 var _ resource.Resource = &EnvironmentGroupResource{}
@@ -87,7 +87,7 @@ func (r *EnvironmentGroupResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	r.EnvironmentGroupClient = newEnvironmentGroupClient(client.Api, tenant.NewTenantClient(client.Api), environment_group_rule_set.NewEnvironmentGroupRuleSetClient(client.Api, tenant.NewTenantClient(client.Api)))
+	r.EnvironmentGroupClient = newEnvironmentGroupClient(client.Api, bapi.NewClient(client.Api), environment_group_rule_set.NewEnvironmentGroupRuleSetClient(client.Api, bapi.NewClient(client.Api)))
 }
 
 // Read function for EnvironmentGroupResource.

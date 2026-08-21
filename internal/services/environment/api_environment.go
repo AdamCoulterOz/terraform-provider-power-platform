@@ -15,22 +15,22 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/services/solution"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 func NewEnvironmentClient(apiClient *api.Client) Client {
 	return Client{
-		tenantClient:   tenant.NewTenantClient(apiClient),
+		tenantClient:   bapi.NewClient(apiClient),
 		solutionClient: solution.NewSolutionClient(apiClient),
 		Api:            apiClient,
 	}
 }
 
 type Client struct {
-	tenantClient   tenant.Client
+	tenantClient   *bapi.Client
 	solutionClient solution.Client
 	Api            *api.Client
 }

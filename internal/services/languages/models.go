@@ -6,12 +6,13 @@ package languages
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type DataSource struct {
 	helpers.TypeInfo
-	LanguagesClient client
+	LanguagesClient *bapi.Client
 }
 
 type DataSourceModel struct {

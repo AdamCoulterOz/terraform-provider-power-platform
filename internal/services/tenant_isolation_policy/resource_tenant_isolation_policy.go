@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 var _ resource.Resource = &Resource{}
@@ -117,7 +117,7 @@ func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest,
 		return
 	}
 
-	tenantClient := tenant.NewTenantClient(client.Api)
+	tenantClient := bapi.NewClient(client.Api)
 	r.Client = NewTenantIsolationPolicyClient(client.Api, tenantClient)
 }
 

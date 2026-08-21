@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 var (
@@ -175,7 +175,7 @@ func (d *AnalyticsExportDataSource) Configure(ctx context.Context, req datasourc
 		return
 	}
 
-	d.analyticsExportClient = NewAnalyticsExportClient(client.Api, tenant.NewTenantClient(client.Api))
+	d.analyticsExportClient = NewAnalyticsExportClient(client.Api, bapi.NewClient(client.Api))
 }
 
 func (d *AnalyticsExportDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

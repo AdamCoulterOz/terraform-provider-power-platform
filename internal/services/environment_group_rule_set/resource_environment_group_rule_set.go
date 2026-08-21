@@ -24,9 +24,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
-	"github.com/microsoft/terraform-provider-power-platform/internal/services/tenant"
 )
 
 var _ resource.Resource = &environmentGroupRuleSetResource{}
@@ -414,7 +414,7 @@ func (r *environmentGroupRuleSetResource) Configure(ctx context.Context, req res
 		)
 		return
 	}
-	r.EnvironmentGroupRuleSetClient = NewEnvironmentGroupRuleSetClient(providerClient.Api, tenant.NewTenantClient(providerClient.Api))
+	r.EnvironmentGroupRuleSetClient = NewEnvironmentGroupRuleSetClient(providerClient.Api, bapi.NewClient(providerClient.Api))
 }
 
 // readRuleSet returns the legacy rule set for the group, or nil when the group has none.

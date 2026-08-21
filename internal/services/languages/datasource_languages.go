@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
@@ -114,7 +115,7 @@ func (d *DataSource) Configure(ctx context.Context, req datasource.ConfigureRequ
 		)
 		return
 	}
-	d.LanguagesClient = newLanguagesClient(providerClient.Api)
+	d.LanguagesClient = bapi.NewClient(providerClient.Api)
 }
 
 func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
