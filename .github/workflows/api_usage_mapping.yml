@@ -1,0 +1,82 @@
+# Regenerates api-usage-mapping.json and fails if it differs from what is
+# committed.
+#
+# The mapping is a generated description of which resources and data sources
+# call which API operations. Nothing else notices when it goes stale, and its
+# failure mode is quiet: a resource changes, the mapping keeps describing the
+# old shape, and the file still looks complete. This job is the only thing that
+# catches that.
+#
+# It needs the spec corpus, because the mapping names operations by their
+# operationId. That is a checkout of another repository, which is a real
+# dependency for this one's CI to take, and it is the reason this job is
+# separate rather than folded into an existing one: if the dependency is
+# unwanted, deleting this file removes it.
+name: API usage mapping
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'internal/**'
+      - 'tools/apiusage/**'
+      - 'api-usage-mapping.json'
+      - '.github/workflows/api_usage_mapping.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    name: Check the mapping is current
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read       # Required for checkout
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check out the spec corpus
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AdamCoulterOz/powerplatform-apis
+          path: .powerplatform-apis
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Regenerate
+        working-directory: tools/apiusage
+        env:
+          POWERPLATFORM_APIS: ${{ github.workspace }}/.powerplatform-apis
+        run: |
+          go run ./callsites > sites.json
+          go run ./callgraph > artifacts.json
+          python3 serialise.py sites.json artifacts.json -o ../../api-usage-mapping.json
+
+      - name: Fail if the committed mapping is out of date
+        run: |
+          if ! git diff --exit-code -- api-usage-mapping.json; then
+            echo
+            echo "api-usage-mapping.json is out of date. Regenerate it:"
+            echo
+            echo "  cd tools/apiusage"
+            echo "  go run ./callsites > sites.json"
+            echo "  go run ./callgraph > artifacts.json"
+            echo "  python3 serialise.py sites.json artifacts.json -o ../../api-usage-mapping.json"
+            echo
+            echo "The diff above is what changed in the provider that the mapping"
+            echo "had not caught up with. It is worth reading rather than just"
+            echo "regenerating: it says which API operations this change altered."
+            exit 1
+          fi

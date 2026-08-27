@@ -94,3 +94,7 @@ examples/temp
 # Python bytecode from the api usage tools
 __pycache__/
 *.pyc
+
+# Intermediate output from tools/apiusage
+tools/apiusage/sites.json
+tools/apiusage/artifacts.json
