@@ -90,3 +90,7 @@ examples/temp
 .userstory.prompt.md
 
 .codeqldb
+
+# Python bytecode from the api usage tools
+__pycache__/
+*.pyc
