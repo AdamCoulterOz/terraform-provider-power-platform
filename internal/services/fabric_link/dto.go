@@ -9,19 +9,19 @@ package fabric_link
 // are created server-side by athena.
 //
 // Flow:
-//  1. GET  api.bap.microsoft.com .../environments/{environmentId}?api-version=2020-10-01-alpha
-//     -> org id/url/unique/friendly name + cluster.uriSuffix (for the athena host).
+//  1. GET  api.bap.microsoft.com .../environments/{environmentId}?api-version=2023-06-01
+//     -> org id/url/unique/friendly name + azureRegion + cluster.uriSuffix (for the athena host).
 //  2. PUT  {geo}.prod.powerquery.microsoft.com/api/connections/upsertConnection
 //     -> a CommonDataService connection with hostContext type "TridentDataverseOneLake";
 //        returns the ConnectionId. (SP-auth variant is a TODO — capture showed a user account.)
-//  3. POST athenawebservice.e{cluster.uriSuffix}.powerapps.com/environment/{environmentId}/lakehouseArtifacts?dxt=false
+//  3. POST athenawebservice.{azureRegionPrefix}{cluster.uriSuffix}.powerapps.com/environment/{environmentId}/lakehouseArtifacts?dxt=false
 //     body = lakehouseArtifactsRequestDto; response = BASE64-encoded lakehouseArtifactsResponseDto
 //     ({WorkspaceId, LakehouseId, ConnectionId}).
 
 // bapEnvironmentDto is the subset of the BAP environment GET we need.
 type bapEnvironmentDto struct {
 	Properties struct {
-		AzureRegion string `json:"azureRegion"`
+		AzureRegion string `json:"azureRegion"` // e.g. "australiasoutheast"; supplies the athena host prefix
 		Cluster     struct {
 			UriSuffix    string `json:"uriSuffix"`    // e.g. "au-il301.gateway.prod.island"
 			GeoShortName string `json:"geoShortName"` // e.g. "AU"
@@ -65,12 +65,23 @@ type lakehouseArtifactsResponseDto struct {
 }
 
 // datalakeFolderListDto is the Dataverse Web API datalakefolders query used to resolve the
-// datalakefolder id that the unlink DELETE targets.
+// datalakefolder id that the unlink DELETE targets. Every organization carries stock rows here
+// (cds2_workspace, cds3_workspace, msdyn_analytics and others) whether or not it has ever been
+// linked, so the rows are cross-checked against synapselinkprofiles before one is chosen.
 type datalakeFolderListDto struct {
-	Value []struct {
-		DatalakeFolderId         string `json:"datalakefolderid"`
-		DatalakeFolderUniqueName string `json:"datalakefolder_uniquename"`
-	} `json:"value"`
+	Value []datalakeFolderDto `json:"value"`
+}
+
+type datalakeFolderDto struct {
+	DatalakeFolderId         string `json:"datalakefolderid"`
+	DatalakeFolderUniqueName string `json:"datalakefolder_uniquename"`
+}
+
+// synapseLinkProfileListDto is the Dataverse Web API synapselinkprofiles query that says which
+// datalakefolder actually anchors a link. Rows are decoded loosely because the name of the
+// datalakefolder lookup column was never confirmed live; see datalakeFolderIdFromProfile.
+type synapseLinkProfileListDto struct {
+	Value []map[string]any `json:"value"`
 }
 
 // The Dataverse->OneLake connection is NOT created here — it is a standard CommonDataService

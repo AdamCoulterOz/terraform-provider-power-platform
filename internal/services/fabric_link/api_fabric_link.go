@@ -7,12 +7,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/api"
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 	"github.com/microsoft/terraform-provider-power-platform/internal/customerrors"
@@ -54,7 +57,10 @@ func (client *client) getBapEnvironment(ctx context.Context, environmentId strin
 		Path:   fmt.Sprintf("/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/%s", environmentId),
 	}
 	values := url.Values{}
-	values.Add(constants.API_VERSION_PARAM, "2020-10-01-alpha")
+	// Every BAP api-version from 2020-10-01 onward returns cluster.uriSuffix, azureRegion and the
+	// full linkedEnvironmentMetadata identically (probed 2020-10-01 through 2024-05-01), so this read
+	// uses the provider-wide stable version rather than an alpha one.
+	values.Add(constants.API_VERSION_PARAM, constants.BAP_API_VERSION)
 	apiUrl.RawQuery = values.Encode()
 
 	env := bapEnvironmentDto{}
@@ -68,17 +74,100 @@ func (client *client) getBapEnvironment(ctx context.Context, environmentId strin
 	return &env, nil
 }
 
-// athenaHost builds the Synapse Link ("athena") orchestration host from the env gateway cluster.
-// The prefix before the cluster uriSuffix is the env's AZURE REGION code: "e" = Australia East,
-// "se" = Australia Southeast (same cluster uriSuffix "au-il301...", different region). acdev's env
-// is Australia East -> "e" (athenawebservice.eau-il301...). Verified against the live athena POST
-// as the hatch user. TODO: derive the prefix from env.Properties.AzureRegion (or make it
-// overridable) so non-East-AU regions resolve correctly instead of hardcoding "e".
-func athenaHost(clusterUriSuffix string) (string, error) {
+// athenaHost builds the Synapse Link ("athena") orchestration host for an environment:
+//
+//	athenawebservice.{azureRegionPrefix}{cluster.uriSuffix}.powerapps.com
+//
+// The two fields concatenate with no separator, which is why the result reads as though a stray
+// letter had been prepended to the cluster suffix. azureRegionPrefix is the compass-direction
+// component of properties.azureRegion with the geography dropped (the geography is already carried
+// by the cluster suffix): eastus and australiaeast both give "e", westus and westeurope "w",
+// northeurope "n", australiasoutheast "se". Confirmed live against the island gateways for eau-,
+// seau-, eus-, wus-, neu- and weu-; a wrong or missing prefix does not produce a useful error, it
+// produces NXDOMAIN, so the prefix is derived rather than assumed.
+func athenaHost(azureRegion, clusterUriSuffix string) (string, error) {
 	if strings.TrimSpace(clusterUriSuffix) == "" {
-		return "", fmt.Errorf("environment cluster uriSuffix is empty; cannot derive the Link to Fabric (athena) host")
+		return "", errors.New("environment cluster uriSuffix is empty; cannot derive the Link to Fabric (athena) host")
 	}
-	return fmt.Sprintf("athenawebservice.e%s.powerapps.com", clusterUriSuffix), nil
+	prefix, err := azureRegionDirectionPrefix(azureRegion)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("athenawebservice.%s%s.powerapps.com", prefix, clusterUriSuffix), nil
+}
+
+// compassDirections maps each compass word an Azure region name can carry to the letter it
+// contributes to the athena host prefix. A two-word direction contributes both letters in order,
+// so "southeast" gives "se" and "northcentral" gives "nc".
+var compassDirections = []struct {
+	word   string
+	letter string
+}{
+	{"north", "n"},
+	{"south", "s"},
+	{"east", "e"},
+	{"west", "w"},
+	{"central", "c"},
+}
+
+// azureRegionDirectionPrefix extracts the athena host prefix from an Azure region name.
+// Region names carry the direction either last ("australiasoutheast", "southafricanorth") or first
+// ("eastus", "northcentralus"), so a trailing direction is matched before a leading one: South
+// Africa North is "n", not "s". Both passes take the longest match, so "southcentralus" is "sc".
+// A region with no identifiable direction is an error — defaulting to a compass point would build
+// a hostname that does not exist.
+func azureRegionDirectionPrefix(azureRegion string) (string, error) {
+	region := lettersOnly(strings.ToLower(strings.TrimSpace(azureRegion)))
+	if region == "" {
+		return "", errors.New("environment azureRegion is empty; cannot derive the Link to Fabric (athena) host prefix")
+	}
+	for i := 1; i < len(region); i++ {
+		// starting at 1 keeps a geography in front of the direction: a region name that is nothing
+		// but compass words is not a region name.
+		if letters, ok := directionLetters(region[i:]); ok {
+			return letters, nil
+		}
+	}
+	for i := len(region); i > 0; i-- {
+		if letters, ok := directionLetters(region[:i]); ok && i < len(region) {
+			return letters, nil
+		}
+	}
+	return "", fmt.Errorf("cannot derive the Link to Fabric (athena) host prefix: no compass direction found in azureRegion %q", azureRegion)
+}
+
+// directionLetters decomposes a region fragment into consecutive compass words and returns the
+// letters they contribute. It reports false unless the whole fragment is compass words.
+func directionLetters(fragment string) (string, bool) {
+	if fragment == "" {
+		return "", false
+	}
+	letters := strings.Builder{}
+	for fragment != "" {
+		matched := false
+		for _, direction := range compassDirections {
+			if strings.HasPrefix(fragment, direction.word) {
+				letters.WriteString(direction.letter)
+				fragment = strings.TrimPrefix(fragment, direction.word)
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return "", false
+		}
+	}
+	return letters.String(), true
+}
+
+// lettersOnly drops the ordinals region names carry ("eastus2", "australiacentral2").
+func lettersOnly(value string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' {
+			return r
+		}
+		return -1
+	}, value)
 }
 
 // CreateFabricLink provisions a Link to Fabric and returns the created mirror ids.
@@ -88,7 +177,7 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 	if err != nil {
 		return nil, err
 	}
-	host, err := athenaHost(env.Properties.Cluster.UriSuffix)
+	host, err := athenaHost(env.Properties.AzureRegion, env.Properties.Cluster.UriSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +238,8 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 	// Best-effort: a missing id only weakens destroy, it shouldn't fail a successful create.
 	if folderId, ferr := client.getDatalakeFolderId(ctx, env.Properties.LinkedEnvironmentMetadata.InstanceURL); ferr == nil {
 		result.DatalakeFolderId = folderId
+	} else {
+		tflog.Warn(ctx, fmt.Sprintf("fabric_link: the link was created but its datalakefolder id could not be resolved, so destroy will not be able to unlink it automatically: %s", ferr.Error()))
 	}
 	return result, nil
 }
@@ -159,7 +250,7 @@ func (client *client) CreateFabricLink(ctx context.Context, environmentId, fabri
 // and retries; request shape copied verbatim from that flow — both query params AND the JSON body
 // echoing the headers).
 func (client *client) updateOrganizationDetails(ctx context.Context, environmentId string, env *bapEnvironmentDto) error {
-	host, err := athenaHost(env.Properties.Cluster.UriSuffix)
+	host, err := athenaHost(env.Properties.AzureRegion, env.Properties.Cluster.UriSuffix)
 	if err != nil {
 		return err
 	}
@@ -182,52 +273,150 @@ func (client *client) updateOrganizationDetails(ctx context.Context, environment
 	return nil
 }
 
-// getDatalakeFolderId resolves the datalakefolder id the unlink DELETE targets. Link to Fabric
-// creates both a cds2_workspace and a cds3_workspace folder; the observed unlink targeted
-// cds3_workspace, so that is preferred (cds2_workspace is the fallback).
+// getDatalakeFolderId resolves the datalakefolder id the unlink DELETE targets.
+//
+// Picking it is the subtle part. A Dataverse organization carries roughly ten stock datalakefolder
+// rows before it has ever been linked to anything — cds2_workspace, cds3_workspace, msdyn_analytics
+// and friends are NOT artefacts of a link (an organization with zero synapselinkprofiles was
+// observed carrying all of them). Selecting by unique name alone, or falling back to the first row,
+// therefore hands DELETE .../lakehouseArtifacts/{id} an unrelated system folder on an organization
+// that is not linked, or is linked differently. So the folder is chosen only from those a
+// synapselinkprofile actually points at, and no match is an error rather than a guess.
 func (client *client) getDatalakeFolderId(ctx context.Context, organizationUrl string) (string, error) {
 	host, err := hostFromUrl(organizationUrl)
 	if err != nil {
 		return "", err
 	}
+
+	linkedFolderIds, err := client.getLinkedDatalakeFolderIds(ctx, host)
+	if err != nil {
+		return "", err
+	}
+	if len(linkedFolderIds) == 0 {
+		return "", errors.New("no synapselinkprofile in this organization references a datalakefolder, so no folder anchors a Link to Fabric; refusing to pick one of the stock datalakefolders (cds2_workspace, cds3_workspace, msdyn_analytics and others exist on every organization and unlinking would delete an unrelated system folder)")
+	}
+
+	folders, err := client.listDatalakeFolders(ctx, host)
+	if err != nil {
+		return "", err
+	}
+
+	matches := make([]datalakeFolderDto, 0, len(linkedFolderIds))
+	for _, folder := range folders {
+		if _, linked := linkedFolderIds[strings.ToLower(strings.TrimSpace(folder.DatalakeFolderId))]; linked {
+			matches = append(matches, folder)
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("the datalakefolder(s) referenced by this organization's synapselinkprofiles (%s) are not among its datalakefolders (%s); refusing to guess which folder anchors the Link to Fabric",
+			strings.Join(sortedFolderIds(linkedFolderIds), ", "), describeDatalakeFolders(folders))
+	case 1:
+		return matches[0].DatalakeFolderId, nil
+	}
+
+	// More than one link exists on the organization (a Fabric link alongside an Azure Synapse one,
+	// say). The captured portal unlink of a Link to Fabric named cds3_workspace, so prefer that,
+	// then cds2_workspace; anything else is ambiguous and is not guessed at.
+	for _, uniqueName := range []string{"cds3_workspace", "cds2_workspace"} {
+		for _, folder := range matches {
+			if folder.DatalakeFolderUniqueName == uniqueName {
+				return folder.DatalakeFolderId, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("this organization has more than one linked datalakefolder (%s) and none of them is the Link to Fabric folder (cds3_workspace or cds2_workspace); refusing to guess which one to unlink",
+		describeDatalakeFolders(matches))
+}
+
+// getLinkedDatalakeFolderIds returns the (lowercased) datalakefolder ids this organization's
+// synapselinkprofiles point at. A folder no profile references does not anchor a link.
+func (client *client) getLinkedDatalakeFolderIds(ctx context.Context, organizationHost string) (map[string]struct{}, error) {
+	apiUrl := &url.URL{
+		Scheme: constants.HTTPS,
+		Host:   organizationHost,
+		Path:   "/api/data/v9.1/synapselinkprofiles",
+	}
+	// Deliberately no $select: the profile's datalakefolder lookup is read off the row by name, and
+	// naming it wrong in $select would fail the whole query with a 400 instead of simply not matching.
+	list := synapseLinkProfileListDto{}
+	if _, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &list); err != nil {
+		return nil, fmt.Errorf("failed to query synapselinkprofiles: %w", err)
+	}
+
+	ids := make(map[string]struct{}, len(list.Value))
+	for _, profile := range list.Value {
+		if id := datalakeFolderIdFromProfile(profile); id != "" {
+			ids[strings.ToLower(id)] = struct{}{}
+		}
+	}
+	return ids, nil
+}
+
+// datalakeFolderIdFromProfile pulls the datalakefolder lookup out of a synapselinkprofile row.
+// OData renders a lookup as "_<name>_value", so keys are normalized before matching.
+func datalakeFolderIdFromProfile(profile map[string]any) string {
+	for key, value := range profile {
+		normalized := strings.TrimSuffix(strings.TrimPrefix(strings.ToLower(key), "_"), "_value")
+		if normalized != "datalakefolderid" && normalized != "datalakefolder" {
+			continue
+		}
+		if id, ok := value.(string); ok && strings.TrimSpace(id) != "" {
+			return strings.TrimSpace(id)
+		}
+	}
+	return ""
+}
+
+// listDatalakeFolders reads the organization's datalakefolder rows.
+func (client *client) listDatalakeFolders(ctx context.Context, organizationHost string) ([]datalakeFolderDto, error) {
 	apiUrl := &url.URL{
 		Scheme:   constants.HTTPS,
-		Host:     host,
+		Host:     organizationHost,
 		Path:     "/api/data/v9.1/datalakefolders",
 		RawQuery: "$select=datalakefolderid,datalakefolder_uniquename",
 	}
-	var list datalakeFolderListDto
+	list := datalakeFolderListDto{}
 	if _, err := client.Api.Execute(ctx, nil, "GET", apiUrl.String(), nil, nil, []int{http.StatusOK}, &list); err != nil {
-		return "", fmt.Errorf("failed to query datalakefolders: %w", err)
+		return nil, fmt.Errorf("failed to query datalakefolders: %w", err)
 	}
-	var fallback string
-	for _, f := range list.Value {
-		switch f.DatalakeFolderUniqueName {
-		case "cds3_workspace":
-			return f.DatalakeFolderId, nil
-		case "cds2_workspace":
-			fallback = f.DatalakeFolderId
-		}
+	return list.Value, nil
+}
+
+// describeDatalakeFolders renders folders as "uniquename (id)" for an error message.
+func describeDatalakeFolders(folders []datalakeFolderDto) string {
+	described := make([]string, 0, len(folders))
+	for _, folder := range folders {
+		described = append(described, fmt.Sprintf("%s (%s)", folder.DatalakeFolderUniqueName, folder.DatalakeFolderId))
 	}
-	if fallback != "" {
-		return fallback, nil
+	if len(described) == 0 {
+		return "none"
 	}
-	if len(list.Value) > 0 {
-		return list.Value[0].DatalakeFolderId, nil
+	slices.Sort(described)
+	return strings.Join(described, ", ")
+}
+
+// sortedFolderIds renders a folder-id set deterministically for an error message.
+func sortedFolderIds(set map[string]struct{}) []string {
+	ids := make([]string, 0, len(set))
+	for id := range set {
+		ids = append(ids, id)
 	}
-	return "", fmt.Errorf("no datalakefolder found for the Link to Fabric")
+	slices.Sort(ids)
+	return ids
 }
 
 // DeleteFabricLink unlinks the Link to Fabric by deleting its datalakefolder via athena.
 func (client *client) DeleteFabricLink(ctx context.Context, environmentId, datalakeFolderId string) error {
 	if strings.TrimSpace(datalakeFolderId) == "" {
-		return fmt.Errorf("datalake folder id is empty; cannot unlink (re-import or remove the link manually)")
+		return errors.New("datalake folder id is empty; cannot unlink (re-import or remove the link manually)")
 	}
 	env, err := client.getBapEnvironment(ctx, environmentId)
 	if err != nil {
 		return err
 	}
-	host, err := athenaHost(env.Properties.Cluster.UriSuffix)
+	host, err := athenaHost(env.Properties.AzureRegion, env.Properties.Cluster.UriSuffix)
 	if err != nil {
 		return err
 	}
