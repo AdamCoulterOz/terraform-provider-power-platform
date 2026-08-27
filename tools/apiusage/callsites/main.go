@@ -206,6 +206,105 @@ func paramTypes(ft *ast.FuncType) map[string]string {
 	return out
 }
 
+// producers holds functions that return one of several fixed path fragments,
+// keyed by bare name. A helper choosing between "/environments/{id}" and
+// "/environmentGroups/{id}" and "" is three operations, not one unresolvable
+// one, and the choice is not visible at the call site.
+var producers = map[string][]string{}
+
+func indexProducers() {
+	for _, pf := range files {
+		for _, d := range pf.f.Decls {
+			fd, ok := d.(*ast.FuncDecl)
+			if !ok || fd.Body == nil || !returnsString(fd.Type) {
+				continue
+			}
+			if fd.Type.Results != nil && len(fd.Type.Results.List) > 1 {
+				continue // (string, error) helpers do real work, not path shaping
+			}
+			var vals []string
+			ok2 := true
+			ast.Inspect(fd.Body, func(n ast.Node) bool {
+				rs, is := n.(*ast.ReturnStmt)
+				if !is || len(rs.Results) != 1 {
+					return true
+				}
+				v := resolve(rs.Results[0])
+				if v == "" {
+					vals = append(vals, v)
+					return true
+				}
+				if strings.HasPrefix(v, "${") {
+					ok2 = false // an opaque value, not a path fragment
+					return true
+				}
+				vals = append(vals, v)
+				return true
+			})
+			if ok2 && len(vals) > 0 {
+				producers[fd.Name.Name] = dedupe(vals)
+			}
+		}
+	}
+	// a producer may be written in terms of another
+	for range 4 {
+		for name, vals := range producers {
+			var next []string
+			for _, v := range vals {
+				next = append(next, expandProducers(v, name)...)
+			}
+			producers[name] = dedupe(next)
+		}
+	}
+}
+
+var producerCall = regexp.MustCompile(`\$?\{[^{}]*?([A-Za-z_][A-Za-z0-9_]*)\([^{}]*\)\}`)
+
+// expandProducers replaces every {…name(…)} placeholder naming a producer with
+// each fragment that producer can return.
+func expandProducers(s string, skip string) []string {
+	out := []string{s}
+	for range 4 {
+		var next []string
+		grew := false
+		for _, cand := range out {
+			m := producerCall.FindStringSubmatchIndex(cand)
+			if m == nil {
+				next = append(next, cand)
+				continue
+			}
+			name := cand[m[2]:m[3]]
+			vals, known := producers[name]
+			if !known || name == skip {
+				next = append(next, cand)
+				continue
+			}
+			for _, v := range vals {
+				next = append(next, cand[:m[0]]+v+cand[m[1]:])
+			}
+			grew = true
+		}
+		out = dedupe(next)
+		if !grew || len(out) > 12 {
+			break
+		}
+	}
+	return out
+}
+
+func dedupe(in []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, v := range in {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 var builders = map[string]*builder{}
 
 // callArgs records, per package and callee name, the argument lists used at
@@ -901,6 +1000,7 @@ func main() {
 	}
 	resolveBuilders()
 	indexCallArgs()
+	indexProducers()
 
 	var sites []Site
 	for _, pf := range files {
@@ -1094,7 +1194,11 @@ func main() {
 					if a {
 						approx = true
 					}
-					for _, v := range expandParams(pf.pkg, fd, raw) {
+					var candidates []string
+					for _, base := range expandParams(pf.pkg, fd, raw) {
+						candidates = append(candidates, expandProducers(base, "")...)
+					}
+					for _, v := range dedupe(candidates) {
 						// a surviving ${x} is a reference this analysis could
 						// not follow, not a path parameter; prefer any variant
 						// that resolved fully.

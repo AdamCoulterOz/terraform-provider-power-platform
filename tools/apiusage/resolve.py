@@ -19,12 +19,24 @@ def ph(seg):  # whole segment is a single template parameter
 def normseg(seg):
     return re.sub(r'\{[^{}]*\}','{}',seg)
 
+def segmatch(spec, call):
+    """A templated part of a spec segment absorbs whatever the call has there.
+
+    The whole-segment case is the common one, but a spec also templates inside a
+    segment, as OData does with {entitySetName}({recordId}). Everything outside
+    a template must match exactly, case included.
+    """
+    if ph(spec):
+        return True
+    pattern = "".join(
+        "[^/]+" if part.startswith("{") and part.endswith("}") else re.escape(part)
+        for part in re.split(r"(\{[^{}]*\})", spec) if part)
+    return re.fullmatch(pattern, call) is not None
+
+
 def match(specSegs, callSegs):
     if len(specSegs)!=len(callSegs): return False
-    for a,b in zip(specSegs,callSegs):
-        if ph(a): continue                       # spec template absorbs one segment
-        if normseg(a)!=normseg(b): return False  # exact, case sensitive
-    return True
+    return all(segmatch(a,b) for a,b in zip(specSegs,callSegs))
 
 SPECS = {}
 

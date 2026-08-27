@@ -269,38 +269,6 @@
       ]
     },
     {
-      "id": "datasource:powerplatform_environment_group_role_based_access_assignments",
-      "kind": "datasource",
-      "name": "powerplatform_environment_group_role_based_access_assignments",
-      "source": {
-        "path": "internal/services/role_based_access/datasource_environment_group_role_based_access_assignments.go",
-        "line": 23
-      },
-      "calls": [
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentGroupRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        }
-      ]
-    },
-    {
       "id": "datasource:powerplatform_environment_powerapps",
       "kind": "datasource",
       "name": "powerplatform_environment_powerapps",
@@ -324,38 +292,6 @@
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through GetPowerApps."
-        }
-      ]
-    },
-    {
-      "id": "datasource:powerplatform_environment_role_based_access_assignments",
-      "kind": "datasource",
-      "name": "powerplatform_environment_role_based_access_assignments",
-      "source": {
-        "path": "internal/services/role_based_access/datasource_environment_role_based_access_assignments.go",
-        "line": 23
-      },
-      "calls": [
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentGroupRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
         }
       ]
     },
@@ -506,29 +442,12 @@
       ]
     },
     {
-      "id": "datasource:powerplatform_rest_query",
+      "id": "datasource:powerplatform_rbac_role_assignments",
       "kind": "datasource",
-      "name": "powerplatform_rest_query",
+      "name": "powerplatform_rbac_role_assignments",
       "source": {
-        "path": "internal/services/rest/datasource_rest_query.go",
-        "line": 19
-      },
-      "calls": [],
-      "uncatalogued": [
-        {
-          "reason": "caller-supplied",
-          "count": 1,
-          "note": "The request URL is supplied by the practitioner at run time."
-        }
-      ]
-    },
-    {
-      "id": "datasource:powerplatform_role_based_access_assignments",
-      "kind": "datasource",
-      "name": "powerplatform_role_based_access_assignments",
-      "source": {
-        "path": "internal/services/role_based_access/datasource_role_based_access_assignments.go",
-        "line": 71
+        "path": "internal/services/role_based_access/datasource_rbac_role_assignments.go",
+        "line": 77
       },
       "calls": [
         {
@@ -551,6 +470,23 @@
           "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_rest_query",
+      "kind": "datasource",
+      "name": "powerplatform_rest_query",
+      "source": {
+        "path": "internal/services/rest/datasource_rest_query.go",
+        "line": 19
+      },
+      "calls": [],
+      "uncatalogued": [
+        {
+          "reason": "caller-supplied",
+          "count": 1,
+          "note": "The request URL is supplied by the practitioner at run time."
         }
       ]
     },
@@ -1730,14 +1666,14 @@
       "calls": [
         {
           "spec": "bapi",
-          "operation": "environments_get",
+          "operation": "environmentRoleAssignments_addApplicationUser",
           "entrypoint": "Create",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "bapi",
-          "operation": "environmentRoleAssignments_addApplicationUser",
+          "operation": "environments_get",
           "entrypoint": "Create",
           "coverage": "full",
           "grade": "derived"
@@ -1970,91 +1906,6 @@
           "spec": "bapi",
           "operation": "environmentGroups_update",
           "entrypoint": "Update",
-          "coverage": "full",
-          "grade": "derived"
-        }
-      ]
-    },
-    {
-      "id": "resource:powerplatform_environment_group_role_based_access_assignment",
-      "kind": "resource",
-      "name": "powerplatform_environment_group_role_based_access_assignment",
-      "source": {
-        "path": "internal/services/role_based_access/resource_environment_group_role_based_access_assignment.go",
-        "line": 26
-      },
-      "calls": [
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createEnvironmentGroupRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createEnvironmentRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "bapi",
-          "operation": "tenant_get",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived",
-          "apiVersion": "2021-04-01"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteEnvironmentGroupRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteEnvironmentRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentGroupRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listRoleAssignments",
-          "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
         }
@@ -2312,91 +2163,6 @@
           "grade": "derived",
           "apiVersion": "2021-04-01",
           "note": "Reached only through GetTenant."
-        }
-      ]
-    },
-    {
-      "id": "resource:powerplatform_environment_role_based_access_assignment",
-      "kind": "resource",
-      "name": "powerplatform_environment_role_based_access_assignment",
-      "source": {
-        "path": "internal/services/role_based_access/resource_environment_role_based_access_assignment.go",
-        "line": 26
-      },
-      "calls": [
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createEnvironmentGroupRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createEnvironmentRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_createRoleAssignment",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
-        },
-        {
-          "spec": "bapi",
-          "operation": "tenant_get",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived",
-          "apiVersion": "2021-04-01"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteEnvironmentGroupRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteEnvironmentRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_deleteRoleAssignment",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentGroupRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listEnvironmentRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "ppapi",
-          "operation": "authorization_listRoleAssignments",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
         }
       ]
     },
@@ -3075,140 +2841,12 @@
       ]
     },
     {
-      "id": "resource:powerplatform_rest",
+      "id": "resource:powerplatform_rbac_role_assignment",
       "kind": "resource",
-      "name": "powerplatform_rest",
+      "name": "powerplatform_rbac_role_assignment",
       "source": {
-        "path": "internal/services/rest/resource_rest.go",
-        "line": 26
-      },
-      "calls": [],
-      "uncatalogued": [
-        {
-          "reason": "caller-supplied",
-          "count": 4,
-          "note": "The request URL is supplied by the practitioner at run time."
-        }
-      ]
-    },
-    {
-      "id": "resource:powerplatform_role_assignment",
-      "kind": "resource",
-      "name": "powerplatform_role_assignment",
-      "source": {
-        "path": "internal/services/application/resource_role_assignment.go",
-        "line": 44
-      },
-      "calls": [
-        {
-          "spec": "dataverse",
-          "operation": "users_read",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_listSecurityRoles",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_addRole",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through AddPrincipalSecurityRoles."
-        },
-        {
-          "spec": "bapi",
-          "operation": "environments_get",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_read",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_listSecurityRoles",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_removeRole",
-          "entrypoint": "Delete",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through RemovePrincipalSecurityRoles."
-        },
-        {
-          "spec": "bapi",
-          "operation": "environments_get",
-          "entrypoint": "Delete",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_read",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_listSecurityRoles",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "bapi",
-          "operation": "environments_get",
-          "entrypoint": "Read",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_read",
-          "entrypoint": "Update",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
-          "operation": "users_listSecurityRoles",
-          "entrypoint": "Update",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "bapi",
-          "operation": "environments_get",
-          "entrypoint": "Update",
-          "coverage": "full",
-          "grade": "derived"
-        }
-      ]
-    },
-    {
-      "id": "resource:powerplatform_role_based_access_assignment",
-      "kind": "resource",
-      "name": "powerplatform_role_based_access_assignment",
-      "source": {
-        "path": "internal/services/role_based_access/resource_role_based_access_assignment.go",
-        "line": 25
+        "path": "internal/services/role_based_access/resource_rbac_role_assignment.go",
+        "line": 42
       },
       "calls": [
         {
@@ -3217,7 +2855,7 @@
           "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
+          "note": "Reached only through CreateRoleAssignment."
         },
         {
           "spec": "ppapi",
@@ -3225,7 +2863,7 @@
           "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
+          "note": "Reached only through CreateRoleAssignment."
         },
         {
           "spec": "ppapi",
@@ -3233,7 +2871,39 @@
           "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
-          "note": "Reached only through createRoleAssignmentAtPath."
+          "note": "Reached only through CreateRoleAssignment."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ListRoleAssignments."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ListRoleAssignments."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ListRoleAssignments."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleDefinitions",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ListRoleDefinitions."
         },
         {
           "spec": "bapi",
@@ -3284,6 +2954,155 @@
           "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleDefinitions",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RoleDefinitionNameById."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleDefinitions",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ListRoleDefinitions."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_rest",
+      "kind": "resource",
+      "name": "powerplatform_rest",
+      "source": {
+        "path": "internal/services/rest/resource_rest.go",
+        "line": 26
+      },
+      "calls": [],
+      "uncatalogued": [
+        {
+          "reason": "caller-supplied",
+          "count": 4,
+          "note": "The request URL is supplied by the practitioner at run time."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_security_role_assignment",
+      "kind": "resource",
+      "name": "powerplatform_security_role_assignment",
+      "source": {
+        "path": "internal/services/application/resource_security_role_assignment.go",
+        "line": 69
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPrincipalBySystemUserId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_add",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddPrincipalSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPrincipalBySystemUserId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_remove",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemovePrincipalSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPrincipalBySystemUserId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetDataverseSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getEnvironment."
         }
       ]
     },
