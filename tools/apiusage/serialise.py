@@ -148,9 +148,11 @@ doc = {
         'entrypoints': {'Create': 'Create', 'Read': 'Read', 'Update': 'Update',
                         'Delete': 'Delete', 'ImportState': 'Import',
                         'ModifyPlan': 'Plan modification', 'ValidateConfig': 'Config validation'},
-        'uncatalogued': {'async-continuation': 'Async continuation',
-                         'caller-supplied': 'Caller-supplied URL'},
     },
+    # a sibling of artifacts, not a member of it: the checker reads it from the
+    # document root
+    'uncatalogued': {'async-continuation': 'Async continuation',
+                     'caller-supplied': 'Caller-supplied URL'},
     'grades': {
         'observed': 'observed',
         'vocabulary': [

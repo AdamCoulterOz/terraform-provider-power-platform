@@ -1,0 +1,3739 @@
+{
+  "catalogue": "https://adamcoulteroz.github.io/powerplatform-apis/specs.json",
+  "artifacts": {
+    "kind": "provider component",
+    "kinds": {
+      "resource": "Resource",
+      "datasource": "Data source"
+    },
+    "entrypoints": {
+      "Create": "Create",
+      "Read": "Read",
+      "Update": "Update",
+      "Delete": "Delete",
+      "ImportState": "Import",
+      "ModifyPlan": "Plan modification",
+      "ValidateConfig": "Config validation"
+    }
+  },
+  "uncatalogued": {
+    "async-continuation": "Async continuation",
+    "caller-supplied": "Caller-supplied URL"
+  },
+  "grades": {
+    "observed": "observed",
+    "vocabulary": [
+      {
+        "id": "observed",
+        "title": "Observed in recorded traffic",
+        "caveat": "Seen on the wire in a recorded exchange."
+      },
+      {
+        "id": "derived",
+        "title": "Derived from source",
+        "caveat": "Read out of the provider source by static analysis, not seen executing."
+      }
+    ]
+  },
+  "items": [
+    {
+      "id": "datasource:powerplatform_analytics_data_exports",
+      "kind": "datasource",
+      "name": "powerplatform_analytics_data_exports",
+      "source": {
+        "path": "internal/services/analytics_data_export/datasource_analytics_data_exports.go",
+        "line": 29
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "gateway_getCluster",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "analytics",
+          "operation": "connections_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_billing_policies",
+      "kind": "datasource",
+      "name": "powerplatform_billing_policies",
+      "source": {
+        "path": "internal/services/licensing/datasource_billing_policies.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicies",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_billing_policies_environments",
+      "kind": "datasource",
+      "name": "powerplatform_billing_policies_environments",
+      "source": {
+        "path": "internal/services/licensing/datasource_billing_policies_environments.go",
+        "line": 25
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicyEnvironments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_connection_shares",
+      "kind": "datasource",
+      "name": "powerplatform_connection_shares",
+      "source": {
+        "path": "internal/services/connection/datasource_connection_shares.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_connections",
+      "kind": "datasource",
+      "name": "powerplatform_connections",
+      "source": {
+        "path": "internal/services/connection/datasource_connections.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "connectivity_listConnectionsOnEnvironmentHost",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_connectors",
+      "kind": "datasource",
+      "name": "powerplatform_connectors",
+      "source": {
+        "path": "internal/services/connectors/datasource_connectors.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "powerapps",
+          "operation": "connectors_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "connectorMetadata_listUnblockable",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "connectorMetadata_listVirtual",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_currencies",
+      "kind": "datasource",
+      "name": "powerplatform_currencies",
+      "source": {
+        "path": "internal/services/currencies/datasource_currencies.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "locations_listCurrencies",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_data_loss_prevention_policies",
+      "kind": "datasource",
+      "name": "powerplatform_data_loss_prevention_policies",
+      "source": {
+        "path": "internal/services/dlp_policy/datasource_dlp_policy.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_get",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPolicies."
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_data_records",
+      "kind": "datasource",
+      "name": "powerplatform_data_records",
+      "source": {
+        "path": "internal/services/data_record/datasource_data_record.go",
+        "line": 28
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "records_query",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_application_packages",
+      "kind": "datasource",
+      "name": "powerplatform_environment_application_packages",
+      "source": {
+        "path": "internal/services/application/datasource_environment_application_packages.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "appmanagement_getEnvironmentApplicationPackage",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_group_role_based_access_assignments",
+      "kind": "datasource",
+      "name": "powerplatform_environment_group_role_based_access_assignments",
+      "source": {
+        "path": "internal/services/role_based_access/datasource_environment_group_role_based_access_assignments.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_powerapps",
+      "kind": "datasource",
+      "name": "powerplatform_environment_powerapps",
+      "source": {
+        "path": "internal/services/powerapps/datasource_environment_powerapps.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2023-06-01"
+        },
+        {
+          "spec": "powerapps",
+          "operation": "apps_listByEnvironment",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPowerApps."
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_role_based_access_assignments",
+      "kind": "datasource",
+      "name": "powerplatform_environment_role_based_access_assignments",
+      "source": {
+        "path": "internal/services/role_based_access/datasource_environment_role_based_access_assignments.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_settings",
+      "kind": "datasource",
+      "name": "powerplatform_environment_settings",
+      "source": {
+        "path": "internal/services/environment_settings/datasource_environment_settings.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_listBackendSettings",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environment_templates",
+      "kind": "datasource",
+      "name": "powerplatform_environment_templates",
+      "source": {
+        "path": "internal/services/environment_templates/datasource_environment_templates.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "locations_listTemplates",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_environments",
+      "kind": "datasource",
+      "name": "powerplatform_environments",
+      "source": {
+        "path": "internal/services/environment/datasource_environments.go",
+        "line": 28
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2023-06-01"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_query",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetTableData."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getEnvironment."
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_languages",
+      "kind": "datasource",
+      "name": "powerplatform_languages",
+      "source": {
+        "path": "internal/services/languages/datasource_languages.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "locations_listLanguages",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_locations",
+      "kind": "datasource",
+      "name": "powerplatform_locations",
+      "source": {
+        "path": "internal/services/locations/datasource_locations.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "locations_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_publishers",
+      "kind": "datasource",
+      "name": "powerplatform_publishers",
+      "source": {
+        "path": "internal/services/publisher/datasource_publishers.go",
+        "line": 25
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_rest_query",
+      "kind": "datasource",
+      "name": "powerplatform_rest_query",
+      "source": {
+        "path": "internal/services/rest/datasource_rest_query.go",
+        "line": 19
+      },
+      "calls": [],
+      "uncatalogued": [
+        {
+          "reason": "caller-supplied",
+          "count": 1,
+          "note": "The request URL is supplied by the practitioner at run time."
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_role_based_access_assignments",
+      "kind": "datasource",
+      "name": "powerplatform_role_based_access_assignments",
+      "source": {
+        "path": "internal/services/role_based_access/datasource_role_based_access_assignments.go",
+        "line": 71
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_role_definitions",
+      "kind": "datasource",
+      "name": "powerplatform_role_definitions",
+      "source": {
+        "path": "internal/services/role_based_access/datasource_role_definitions.go",
+        "line": 25
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleDefinitions",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_security_roles",
+      "kind": "datasource",
+      "name": "powerplatform_security_roles",
+      "source": {
+        "path": "internal/services/authorization/datasource_securityroles.go",
+        "line": 29
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_solution_checker_rules",
+      "kind": "datasource",
+      "name": "powerplatform_solution_checker_rules",
+      "source": {
+        "path": "internal/services/solution_checker_rules/datasource_solution_checker_rules.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "advisor",
+          "operation": "rules_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_solutions",
+      "kind": "datasource",
+      "name": "powerplatform_solutions",
+      "source": {
+        "path": "internal/services/solution/datasource_solutions.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_tenant",
+      "kind": "datasource",
+      "name": "powerplatform_tenant",
+      "source": {
+        "path": "internal/services/tenant/datasource_tenant.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_tenant_application_packages",
+      "kind": "datasource",
+      "name": "powerplatform_tenant_application_packages",
+      "source": {
+        "path": "internal/services/application/datasource_tenant_application_packages.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "appmanagement_getTenantApplicationPackage",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_tenant_capacity",
+      "kind": "datasource",
+      "name": "powerplatform_tenant_capacity",
+      "source": {
+        "path": "internal/services/capacity/datasource_tenant_capacity.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "licensing_getTenantCapacityDetails",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "datasource:powerplatform_tenant_settings",
+      "kind": "datasource",
+      "name": "powerplatform_tenant_settings",
+      "source": {
+        "path": "internal/services/tenant_settings/datasource_tenant_settings.go",
+        "line": 24
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_admin_management_application",
+      "kind": "resource",
+      "name": "powerplatform_admin_management_application",
+      "source": {
+        "path": "internal/services/admin_management_application/resource_admin_management_application.go",
+        "line": 22
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "adminApplications_register",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "adminApplications_unregister",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "adminApplications_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_application_user",
+      "kind": "resource",
+      "name": "powerplatform_application_user",
+      "source": {
+        "path": "internal/services/application/resource_application_user.go",
+        "line": 31
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_createApplicationUser",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_update",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through SetApplicationUserDisabledState."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_delete",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through executeSystemUserDelete."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listBusinessUnits",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetRootBusinessUnitId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getApplicationUsersByApplicationId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_update",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "ImportState",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "ImportState",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_update",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through SetApplicationUserDisabledState."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPrincipalBySystemUserId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_billing_policy",
+      "kind": "resource",
+      "name": "powerplatform_billing_policy",
+      "source": {
+        "path": "internal/services/licensing/resource_billing_policy.go",
+        "line": 29
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "licensing_getBillingPolicy",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetBillingPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "method": "post",
+          "path": "/licensing/BillingPolicies",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/licensing/BillingPolicies/{billingId}",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_getBillingPolicy",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_updateBillingPolicy",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through UpdateBillingPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_getBillingPolicy",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetBillingPolicy."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_billing_policy_environment",
+      "kind": "resource",
+      "name": "powerplatform_billing_policy_environment",
+      "source": {
+        "path": "internal/services/licensing/resource_billing_policy_environment.go",
+        "line": 32
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicyEnvironments",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_addBillingPolicyEnvironment",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_removeBillingPolicyEnvironment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveEnvironmentsToBillingPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_removeBillingPolicyEnvironment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicyEnvironments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_getBillingPolicy",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetBillingPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicyEnvironments",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_addBillingPolicyEnvironment",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_removeBillingPolicyEnvironment",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_connection",
+      "kind": "resource",
+      "name": "powerplatform_connection",
+      "source": {
+        "path": "internal/services/connection/resource_connection.go",
+        "line": 32
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "method": "put",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateConnection."
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironment."
+        },
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "put",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_connection_share",
+      "kind": "resource",
+      "name": "powerplatform_connection_share",
+      "source": {
+        "path": "internal/services/connection/resource_connection_share.go",
+        "line": 30
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "method": "post",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "post",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironment."
+        },
+        {
+          "spec": "ppapi",
+          "method": "get",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "method": "post",
+          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_copilot_studio_application_insights",
+      "kind": "resource",
+      "name": "powerplatform_copilot_studio_application_insights",
+      "source": {
+        "path": "internal/services/copilot_studio_application_insights/resource_copilot_studio_application_insights.go",
+        "line": 28
+      },
+      "calls": [
+        {
+          "spec": "copilot",
+          "operation": "appInsightsConfiguration_update",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "copilot",
+          "operation": "appInsightsConfiguration_update",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "copilot",
+          "operation": "appInsightsConfiguration_read",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "copilot",
+          "operation": "appInsightsConfiguration_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_data_loss_prevention_policy",
+      "kind": "resource",
+      "name": "powerplatform_data_loss_prevention_policy",
+      "source": {
+        "path": "internal/services/dlp_policy/resource_dlp_policy.go",
+        "line": 31
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_create",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "dlpPolicies_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_data_record",
+      "kind": "resource",
+      "name": "powerplatform_data_record",
+      "source": {
+        "path": "internal/services/data_record/resource_data_record.go",
+        "line": 37
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "entityDefinitions_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_create",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived",
+          "approximate": true,
+          "note": "Path assembled by conditional reassignment; not resolved to a branch."
+        },
+        {
+          "spec": "dataverse",
+          "method": "patch",
+          "path": "/api/data/v9.2/{value}",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyDataRecord. Path assembled by conditional reassignment; not resolved to a branch.",
+          "approximate": true
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_listReferences",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_remove",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_add",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "entityDefinitions_listAttributes",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEntityAttributesDefinition."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "entityDefinitions_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_create",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyDataRecord. Path assembled by conditional reassignment; not resolved to a branch.",
+          "approximate": true
+        },
+        {
+          "spec": "dataverse",
+          "method": "patch",
+          "path": "/api/data/v9.2/{value}",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyDataRecord. Path assembled by conditional reassignment; not resolved to a branch.",
+          "approximate": true
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_removeByKey",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteDataRecord."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_listReferences",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_remove",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_add",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_listRelated",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetRelationData."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "entityDefinitions_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "entityDefinitions_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_create",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived",
+          "approximate": true,
+          "note": "Path assembled by conditional reassignment; not resolved to a branch."
+        },
+        {
+          "spec": "dataverse",
+          "method": "patch",
+          "path": "/api/data/v9.2/{value}",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyDataRecord. Path assembled by conditional reassignment; not resolved to a branch.",
+          "approximate": true
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_listReferences",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_remove",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "relationships_add",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through applyRelation."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_enterprise_policy",
+      "kind": "resource",
+      "name": "powerplatform_enterprise_policy",
+      "source": {
+        "path": "internal/services/enterprise_policy/resource_enterprise_policy.go",
+        "line": 29
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "enterprisePolicies_linkUnlink",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "enterprisePolicies_linkUnlink",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 2,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment",
+      "kind": "resource",
+      "name": "powerplatform_environment",
+      "source": {
+        "path": "internal/services/environment/resource_environment.go",
+        "line": 45
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "locations_listCurrencies",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through currencyCodeValidator."
+        },
+        {
+          "spec": "bapi",
+          "operation": "locations_listLanguages",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through languageCodeValidator."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_create",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_update",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updateEnvironmentAiFeaturesWithRetry."
+        },
+        {
+          "spec": "bapi",
+          "operation": "locations_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_validateDetails",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ValidateCreateEnvironmentDetails."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_listBillingPolicyEnvironments",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_addBillingPolicyEnvironment",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_query",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironment."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_provisionDataverse",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddDataverseToEnvironment."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_modifySku",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through modifyEnvironmentTypeWithRetry."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_validateDetails",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ValidateUpdateEnvironmentDetails."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_addBillingPolicyEnvironment",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddEnvironmentsToBillingPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "licensing_removeBillingPolicyEnvironment",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveEnvironmentsToBillingPolicy."
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 4,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_application_admin",
+      "kind": "resource",
+      "name": "powerplatform_environment_application_admin",
+      "source": {
+        "path": "internal/services/application/resource_environment_application_admin.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_addApplicationUser",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_update",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_application_package_install",
+      "kind": "resource",
+      "name": "powerplatform_environment_application_package_install",
+      "source": {
+        "path": "internal/services/application/resource_environment_application_package_install.go",
+        "line": 23
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "appmanagement_installApplicationPackage",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 1,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_disaster_recovery",
+      "kind": "resource",
+      "name": "powerplatform_environment_disaster_recovery",
+      "source": {
+        "path": "internal/services/disaster_recovery/resource_disaster_recovery.go",
+        "line": 27
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_update",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through setDisasterRecoveryWithRetry."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_update",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_update",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through setDisasterRecoveryWithRetry."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 3,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_group",
+      "kind": "resource",
+      "name": "powerplatform_environment_group",
+      "source": {
+        "path": "internal/services/environment_groups/resource_environment_group.go",
+        "line": 28
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environmentGroups_create",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_deleteRuleSet",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleSet",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_list",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetEnvironmentsInEnvironmentGroup."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "environmentmanagement_removeEnvironmentFromGroup",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveEnvironmentFromEnvironmentGroup."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentGroups_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentGroups_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentGroups_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_group_role_based_access_assignment",
+      "kind": "resource",
+      "name": "powerplatform_environment_group_role_based_access_assignment",
+      "source": {
+        "path": "internal/services/role_based_access/resource_environment_group_role_based_access_assignment.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentGroupRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentGroupRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_group_rule_set",
+      "kind": "resource",
+      "name": "powerplatform_environment_group_rule_set",
+      "source": {
+        "path": "internal/services/environment_group_rule_set/resource_environment_group_rule_set.go",
+        "line": 36
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "governance_createRuleBasedPolicy",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleBasedPolicyById",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_updateRuleBasedPolicyById",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updatePolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_removeRuleFromRuleBasedPolicy",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through removeRuleFromPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_createEnviornmentGroupRuleBasedAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createEnvironmentGroupAssignment."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_listRuleAssignmentsByEnvironmentGroupId",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through listAssignmentsByEnvironmentGroup."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_createRuleSet",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_deleteRuleSet",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleBasedPolicyById",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/governance/ruleBasedPolicies/{policyId}",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through deletePolicy."
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/governance/ruleBasedPolicies/{policyId}/environmentGroups/{groupId}/assignments",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through deleteEnvironmentGroupAssignment."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_removeRuleFromRuleBasedPolicy",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through removeRuleFromPolicy."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleBasedPolicyById",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_listRuleAssignmentsByEnvironmentGroupId",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleSet",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_updateRuleSet",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through UpdateEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_deleteRuleSet",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_createRuleBasedPolicy",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_getRuleBasedPolicyById",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_updateRuleBasedPolicyById",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updatePolicy."
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/governance/ruleBasedPolicies/{policyId}",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through deletePolicy."
+        },
+        {
+          "spec": "ppapi",
+          "method": "delete",
+          "path": "/governance/ruleBasedPolicies/{policyId}/environmentGroups/{groupId}/assignments",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through deleteEnvironmentGroupAssignment."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_removeRuleFromRuleBasedPolicy",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through removeRuleFromPolicy."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_createEnviornmentGroupRuleBasedAssignment",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createEnvironmentGroupAssignment."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_listRuleAssignmentsByEnvironmentGroupId",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through listAssignmentsByEnvironmentGroup."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "governance_createRuleSet",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateEnvironmentGroupRuleSet."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_role_based_access_assignment",
+      "kind": "resource",
+      "name": "powerplatform_environment_role_based_access_assignment",
+      "source": {
+        "path": "internal/services/role_based_access/resource_environment_role_based_access_assignment.go",
+        "line": 26
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentGroupRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentGroupRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_settings",
+      "kind": "resource",
+      "name": "powerplatform_environment_settings",
+      "source": {
+        "path": "internal/services/environment_settings/resources_environment_settings.go",
+        "line": 44
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_update",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_saveBackendSetting",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updateEnvironmentBackendSettings."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_listBackendSettings",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_listBackendSettings",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_saveBackendSetting",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updateEnvironmentBackendSettings."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_listBackendSettings",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "organizationSettings_list",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_variable_value",
+      "kind": "resource",
+      "name": "powerplatform_environment_variable_value",
+      "source": {
+        "path": "internal/services/environment_variable/resource_environment_variable.go",
+        "line": 29
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listDefinitions",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listValues",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_createValue",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createCurrentValue."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_updateValue",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updateCurrentValue."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_readValue",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getCurrentValueByID."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_deleteValue",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listDefinitions",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listValues",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listDefinitions",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listValues",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listDefinitions",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_listValues",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_createValue",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createCurrentValue."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_updateValue",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through updateCurrentValue."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "environmentVariables_readValue",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getCurrentValueByID."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_environment_wave",
+      "kind": "resource",
+      "name": "powerplatform_environment_wave",
+      "source": {
+        "path": "internal/services/environment_wave/resource_environment_wave.go",
+        "line": 30
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "admin",
+          "operation": "features_list",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetFeature."
+        },
+        {
+          "spec": "admin",
+          "operation": "organizations_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "admin",
+          "operation": "features_enable",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "admin",
+          "operation": "features_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "admin",
+          "operation": "organizations_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_managed_environment",
+      "kind": "resource",
+      "name": "powerplatform_managed_environment",
+      "source": {
+        "path": "internal/services/managed_environment/resource_managed_environment.go",
+        "line": 37
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "advisor",
+          "operation": "rules_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "managedEnvironments_setGovernanceConfiguration",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "managedEnvironments_setGovernanceConfiguration",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "advisor",
+          "operation": "rules_list",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "managedEnvironments_setGovernanceConfiguration",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 3,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_managed_solution",
+      "kind": "resource",
+      "name": "powerplatform_managed_solution",
+      "source": {
+        "path": "internal/services/managed_solution/resource_managed_solution.go",
+        "line": 37
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_stage",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_start",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_startUpgrade",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readAsyncOperation",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyManagedSolution."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_publishAllCustomizations",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through PublishAllCustomizations."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readResult",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through validateSolutionImportResult."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "connectivity_listConnectionsOnEnvironmentHost",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_query",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetTableData."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getEnvironment."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetSolutionUniqueName."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_stage",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_start",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_startUpgrade",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readAsyncOperation",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through ApplyManagedSolution."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_publishAllCustomizations",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through PublishAllCustomizations."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readResult",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through validateSolutionImportResult."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "connectivity_listConnectionsOnEnvironmentHost",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "records_query",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetTableData."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_publisher",
+      "kind": "resource",
+      "name": "powerplatform_publisher",
+      "source": {
+        "path": "internal/services/publisher/resource_publisher.go",
+        "line": 41
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_list",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetPublisherByUniqueName."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_create",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_delete",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "publishers_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_rest",
+      "kind": "resource",
+      "name": "powerplatform_rest",
+      "source": {
+        "path": "internal/services/rest/resource_rest.go",
+        "line": 26
+      },
+      "calls": [],
+      "uncatalogued": [
+        {
+          "reason": "caller-supplied",
+          "count": 4,
+          "note": "The request URL is supplied by the practitioner at run time."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_role_assignment",
+      "kind": "resource",
+      "name": "powerplatform_role_assignment",
+      "source": {
+        "path": "internal/services/application/resource_role_assignment.go",
+        "line": 44
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_addRole",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddPrincipalSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_removeRole",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemovePrincipalSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_listSecurityRoles",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_role_based_access_assignment",
+      "kind": "resource",
+      "name": "powerplatform_role_based_access_assignment",
+      "source": {
+        "path": "internal/services/role_based_access/resource_role_based_access_assignment.go",
+        "line": 25
+      },
+      "calls": [
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentGroupRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createEnvironmentRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_createRoleAssignment",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through createRoleAssignmentAtPath."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentGroupRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteEnvironmentRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_deleteRoleAssignment",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentGroupRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listEnvironmentRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "ppapi",
+          "operation": "authorization_listRoleAssignments",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_solution",
+      "kind": "resource",
+      "name": "powerplatform_solution",
+      "source": {
+        "path": "internal/services/solution/resource_solution.go",
+        "line": 31
+      },
+      "calls": [
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_stage",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_start",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readAsyncOperation",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateSolution."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readResult",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through validateSolutionImportResult."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetSolutionUniqueName."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_delete",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteSolution."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getEnvironment."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_stage",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_start",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readAsyncOperation",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateSolution."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutionImport_readResult",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through validateSolutionImportResult."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "solutions_list",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetSolutionUniqueName."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_tenant_isolation_policy",
+      "kind": "resource",
+      "name": "powerplatform_tenant_isolation_policy",
+      "source": {
+        "path": "internal/services/tenant_isolation_policy/resource_tenant_isolation_policy.go",
+        "line": 30
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2021-04-01"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_get",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getTenantIsolationPolicy."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_createOrUpdate",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_get",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getTenantIsolationPolicy."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_createOrUpdate",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "ImportState",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2021-04-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_get",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through getTenantIsolationPolicy."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantIsolation_createOrUpdate",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "async-continuation",
+          "count": 3,
+          "note": "Follows a Location or Operation-Location header returned by a previous response."
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_tenant_settings",
+      "kind": "resource",
+      "name": "powerplatform_tenant_settings",
+      "source": {
+        "path": "internal/services/tenant_settings/resource_tenant_settings.go",
+        "line": 31
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_update",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_update",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "ModifyPlan",
+          "coverage": "partial",
+          "grade": "derived",
+          "apiVersion": "2020-08-01",
+          "note": "Reached only through GetTenant."
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenant_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived",
+          "apiVersion": "2020-08-01"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_list",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "tenantSettings_update",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        }
+      ]
+    },
+    {
+      "id": "resource:powerplatform_user",
+      "kind": "resource",
+      "name": "powerplatform_user",
+      "source": {
+        "path": "internal/services/authorization/resource_user.go",
+        "line": 33
+      },
+      "calls": [
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_list",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentUserByAadObjectId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetDataverseUserByAadObjectId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_modify",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddEnvironmentUserSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_addUser",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through CreateDataverseUser."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_addRole",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddDataverseSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetDataverseUserBySystemUserId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_list",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentUserByAadObjectId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_modify",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveEnvironmentUserSecurityRoles."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_delete",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through DeleteDataverseUser."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_list",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentUserByAadObjectId."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_list",
+          "entrypoint": "Read",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetDataverseUserByAadObjectId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Read",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_list",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentUserByAadObjectId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_modify",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveEnvironmentUserSecurityRoles."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_removeRole",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through RemoveDataverseSecurityRoles."
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_addRole",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through AddDataverseSecurityRoles."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Update",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "dataverse",
+          "operation": "users_read",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetDataverseUserBySystemUserId."
+        }
+      ]
+    }
+  ]
+}
