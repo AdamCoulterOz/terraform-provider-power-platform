@@ -163,10 +163,22 @@ type EnvironmentVariableValueDto struct {
 	Value                      string `json:"value"`
 }
 
+// CreateEnvironmentVariableValueDto is the POST body for an
+// environmentvariablevalue record.
+//
+// The @odata.bind key must be the relationship's
+// ReferencingEntityNavigationPropertyName, not the lookup column name. For
+// environmentvariablevalue -> environmentvariabledefinition that navigation
+// property is "EnvironmentVariableDefinitionId" (PascalCase); the lowercase
+// column name "environmentvariabledefinitionid" is rejected by Dataverse with
+// error 0x80048d19 ("undeclared property"). Confirm the name with:
+//
+//	GET EntityDefinitions(LogicalName='environmentvariablevalue')/ManyToOneRelationships
+//	    ?$select=ReferencingEntityNavigationPropertyName,ReferencedEntity,ReferencingAttribute
 type CreateEnvironmentVariableValueDto struct {
 	SchemaName                            string `json:"schemaname"`
 	Value                                 string `json:"value"`
-	EnvironmentVariableDefinitionODataRef string `json:"environmentvariabledefinitionid@odata.bind"`
+	EnvironmentVariableDefinitionODataRef string `json:"EnvironmentVariableDefinitionId@odata.bind"`
 }
 
 type UpdateEnvironmentVariableValueDto struct {
