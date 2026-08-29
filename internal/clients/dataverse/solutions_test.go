@@ -5,6 +5,7 @@ package dataverse
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -274,7 +275,7 @@ func TestUnitCreateEnvironmentVariableValue_RequestShape(t *testing.T) {
 				{
 					method: "POST",
 					url:    "https://env.crm.dynamics.com/api/data/v9.2/environmentvariablevalues",
-					body:   `{"schemaname":"var_one","value":"v1","environmentvariabledefinitionid@odata.bind":"/environmentvariabledefinitions(` + testDefinitionId + `)"}`,
+					body:   `{"schemaname":"var_one","value":"v1","EnvironmentVariableDefinitionId@odata.bind":"/environmentvariabledefinitions(` + testDefinitionId + `)"}`,
 				},
 			})
 			assert.Equal(t, testValueId, valueId)
@@ -338,4 +339,32 @@ func TestUnitDeleteEnvironmentVariableValue_RequestShape(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestUnitCreateEnvironmentVariableValue_ODataBindKeyIsNavigationProperty pins
+// the @odata.bind key of the environmentvariablevalue create payload.
+//
+// Dataverse requires the key to be the relationship's
+// ReferencingEntityNavigationPropertyName, which for
+// environmentvariablevalue -> environmentvariabledefinition is
+// "EnvironmentVariableDefinitionId". Binding to the lookup column name
+// "environmentvariabledefinitionid" is rejected with 0x80048d19 ("undeclared
+// property"), so a regression here breaks every create of a variable that has
+// no value yet.
+func TestUnitCreateEnvironmentVariableValue_ODataBindKeyIsNavigationProperty(t *testing.T) {
+	const ref = "/environmentvariabledefinitions(" + testDefinitionId + ")"
+
+	payload, err := json.Marshal(CreateEnvironmentVariableValueDto{
+		SchemaName:                            "var_one",
+		Value:                                 "v1",
+		EnvironmentVariableDefinitionODataRef: ref,
+	})
+	require.NoError(t, err)
+
+	decoded := map[string]any{}
+	require.NoError(t, json.Unmarshal(payload, &decoded))
+
+	assert.Equal(t, ref, decoded["EnvironmentVariableDefinitionId@odata.bind"])
+	assert.NotContains(t, decoded, "environmentvariabledefinitionid@odata.bind",
+		"@odata.bind must use the navigation property name, not the lookup column name")
 }
