@@ -129,6 +129,11 @@ func (client *Client) CreateApplicationUser(ctx context.Context, environmentHost
 		Path:   fmt.Sprintf("/api/data/%s/systemusers", constants.DATAVERSE_API_VERSION),
 	}
 
+	// "businessunitid" is the ReferencingEntityNavigationPropertyName of the
+	// systemuser -> businessunit relationship, verified against
+	// EntityDefinitions(LogicalName='systemuser')/ManyToOneRelationships. Not
+	// every relationship names its navigation property after the lookup column,
+	// so check the metadata before adding another @odata.bind here.
 	requestBody := map[string]any{
 		"applicationid":             applicationId,
 		"accessmode":                4,
