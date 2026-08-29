@@ -116,8 +116,7 @@
       "calls": [
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "operation": "connectivity_listConnectionPermissions",
           "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
@@ -990,8 +989,7 @@
       "calls": [
         {
           "spec": "ppapi",
-          "method": "put",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "operation": "connectivity_putConnection",
           "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
@@ -999,16 +997,14 @@
         },
         {
           "spec": "ppapi",
-          "method": "delete",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "operation": "connectivity_deleteConnection",
           "entrypoint": "Delete",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "operation": "connectivity_getConnection",
           "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
@@ -1023,16 +1019,14 @@
         },
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "operation": "connectivity_getConnection",
           "entrypoint": "Update",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "put",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}",
+          "operation": "connectivity_putConnection",
           "entrypoint": "Update",
           "coverage": "full",
           "grade": "derived"
@@ -1050,32 +1044,28 @@
       "calls": [
         {
           "spec": "ppapi",
-          "method": "post",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "operation": "connectivity_modifyConnectionPermissions",
           "entrypoint": "Create",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "operation": "connectivity_listConnectionPermissions",
           "entrypoint": "Create",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "post",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "operation": "connectivity_modifyConnectionPermissions",
           "entrypoint": "Delete",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "operation": "connectivity_listConnectionPermissions",
           "entrypoint": "Read",
           "coverage": "full",
           "grade": "derived"
@@ -1090,16 +1080,14 @@
         },
         {
           "spec": "ppapi",
-          "method": "get",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/permissions",
+          "operation": "connectivity_listConnectionPermissions",
           "entrypoint": "Update",
           "coverage": "full",
           "grade": "derived"
         },
         {
           "spec": "ppapi",
-          "method": "post",
-          "path": "/connectivity/connectors/{connectorName}/connections/{connectionId}/modifyPermissions",
+          "operation": "connectivity_modifyConnectionPermissions",
           "entrypoint": "Update",
           "coverage": "full",
           "grade": "derived"
@@ -2003,8 +1991,7 @@
         },
         {
           "spec": "ppapi",
-          "method": "delete",
-          "path": "/governance/ruleBasedPolicies/{policyId}",
+          "operation": "governance_deleteRuleBasedPolicy",
           "entrypoint": "Delete",
           "coverage": "partial",
           "grade": "derived",
@@ -2012,8 +1999,7 @@
         },
         {
           "spec": "ppapi",
-          "method": "delete",
-          "path": "/governance/ruleBasedPolicies/{policyId}/environmentGroups/{groupId}/assignments",
+          "operation": "governance_deleteRuleBasedPolicyGroupAssignment",
           "entrypoint": "Delete",
           "coverage": "partial",
           "grade": "derived",
@@ -2107,8 +2093,7 @@
         },
         {
           "spec": "ppapi",
-          "method": "delete",
-          "path": "/governance/ruleBasedPolicies/{policyId}",
+          "operation": "governance_deleteRuleBasedPolicy",
           "entrypoint": "Update",
           "coverage": "partial",
           "grade": "derived",
@@ -2116,8 +2101,7 @@
         },
         {
           "spec": "ppapi",
-          "method": "delete",
-          "path": "/governance/ruleBasedPolicies/{policyId}/environmentGroups/{groupId}/assignments",
+          "operation": "governance_deleteRuleBasedPolicyGroupAssignment",
           "entrypoint": "Update",
           "coverage": "partial",
           "grade": "derived",
