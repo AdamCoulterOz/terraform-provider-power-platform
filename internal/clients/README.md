@@ -30,6 +30,6 @@ Rules:
   exported. Terraform models and DTO↔model conversion stay in the services.
 
 Note: the name `athena` is reserved — internally it is the Synapse Link /
-"Link to Fabric" orchestration service (`athenawebservice.e{clusterSuffix}.powerapps.com`,
+"Link to Fabric" orchestration service (`athenawebservice.{azureRegionPrefix}{clusterSuffix}.powerapps.com`,
 own token resource), which is not yet part of this provider; it becomes its own
 client package when the fabric-link feature lands.
