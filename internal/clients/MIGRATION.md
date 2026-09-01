@@ -8,6 +8,8 @@ consistency across packages is the point.
 
 Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `admin`,
 `analytics`, `advisor`, `copilot`) has exactly this shape:
+Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `admin`,
+`advisor`, `copilot`) has exactly this shape:
 
 - `doc.go` — package doc: which API, host, auth scope, spec status.
 - `client.go` — exactly:
