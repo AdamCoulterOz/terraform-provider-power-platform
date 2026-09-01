@@ -6,7 +6,7 @@ consistency across packages is the point.
 
 ## Harness contract (per boundary package)
 
-Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `athena`,
+Every boundary package (`bapi`, `ppapi`, `dataverse`, `powerapps`, `admin`,
 `advisor`, `copilot`) has exactly this shape:
 
 - `doc.go` — package doc: which API, host, auth scope, spec status.
