@@ -34,19 +34,19 @@ func newTestClient(t *testing.T) *Client {
 	return NewClient(api.NewApiClientBase(cfg, api.NewAuthBase(cfg)))
 }
 
-// TestUnitAthenaClient_Scopes pins the admin centre boundary to the fixed PPAC
+// TestUnitAdminClient_Scopes pins the admin centre boundary to the fixed PPAC
 // scope constant — the admin center API does not take its scope from the
 // cloud configuration.
-func TestUnitAthenaClient_Scopes(t *testing.T) {
+func TestUnitAdminClient_Scopes(t *testing.T) {
 	client := newTestClient(t)
 
 	assert.Equal(t, []string{"065d9450-1e87-434e-ac2f-69af271549ed"}, client.scopes())
 	assert.Equal(t, []string{constants.PPAC_SCOPE}, client.scopes())
 }
 
-// TestUnitAthenaClient_Host pins the admin centre boundary to the admin center host
+// TestUnitAdminClient_Host pins the admin centre boundary to the admin centre host
 // configured for the cloud.
-func TestUnitAthenaClient_Host(t *testing.T) {
+func TestUnitAdminClient_Host(t *testing.T) {
 	client := newTestClient(t)
 
 	assert.Equal(t, "api.admin.powerplatform.microsoft.com", client.host())
