@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package athena
+package admin
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// newTestClient returns an Athena client over a TestMode transport: auth
+// newTestClient returns an admin centre client over a TestMode transport: auth
 // returns a mock token and retry sleeps are no-ops, so httpmock responders
 // see exactly the requests the operations build.
 func newTestClient(t *testing.T) *Client {
@@ -34,7 +34,7 @@ func newTestClient(t *testing.T) *Client {
 	return NewClient(api.NewApiClientBase(cfg, api.NewAuthBase(cfg)))
 }
 
-// TestUnitAthenaClient_Scopes pins the Athena boundary to the fixed PPAC
+// TestUnitAthenaClient_Scopes pins the admin centre boundary to the fixed PPAC
 // scope constant — the admin center API does not take its scope from the
 // cloud configuration.
 func TestUnitAthenaClient_Scopes(t *testing.T) {
@@ -44,7 +44,7 @@ func TestUnitAthenaClient_Scopes(t *testing.T) {
 	assert.Equal(t, []string{constants.PPAC_SCOPE}, client.scopes())
 }
 
-// TestUnitAthenaClient_Host pins the Athena boundary to the admin center host
+// TestUnitAthenaClient_Host pins the admin centre boundary to the admin center host
 // configured for the cloud.
 func TestUnitAthenaClient_Host(t *testing.T) {
 	client := newTestClient(t)
