@@ -12,7 +12,7 @@ eventually be published — as a standalone Go client module.
 | `ppapi` | Power Platform API | `api.powerplatform.com` |
 | `dataverse` | Dataverse Web API (per-environment OData v4) | `{org}.crm.dynamics.com` |
 | `powerapps` | PowerApps API | `api.powerapps.com` |
-| `admin` | Power Platform admin centre API | `api.admin.powerplatform.microsoft.com` |
+| `admin` | Power Platform admin center API | `api.admin.powerplatform.microsoft.com` |
 | `synapselink` | Azure Synapse Link for Dataverse — the orchestration service behind Link to Fabric, internally code-named Athena. Reserved; not yet part of this provider. | `athenawebservice.{azureRegionPrefix}{clusterSuffix}.powerapps.com` |
 | `advisor` | PowerApps Advisor API (solution checker) | per-environment runtime endpoint |
 | `copilot` | Copilot Studio API | per-environment runtime endpoint |
