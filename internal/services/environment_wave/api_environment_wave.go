@@ -9,24 +9,24 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/api"
-	"github.com/microsoft/terraform-provider-power-platform/internal/clients/athena"
+	"github.com/microsoft/terraform-provider-power-platform/internal/clients/admin"
 	"github.com/microsoft/terraform-provider-power-platform/internal/clients/bapi"
 	"github.com/microsoft/terraform-provider-power-platform/internal/helpers"
 )
 
 type environmentWaveClient struct {
-	*athena.Client
+	*admin.Client
 	environmentClient *bapi.Client
 }
 
 func newEnvironmentWaveClient(apiClient *api.Client) *environmentWaveClient {
 	return &environmentWaveClient{
-		Client:            athena.NewClient(apiClient),
+		Client:            admin.NewClient(apiClient),
 		environmentClient: bapi.NewClient(apiClient),
 	}
 }
 
-func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, environmentId string) (*athena.OrganizationDto, error) {
+func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, environmentId string) (*admin.OrganizationDto, error) {
 	organizations, err := client.GetOrganizations(ctx)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (client *environmentWaveClient) GetOrgEnvironmentId(ctx context.Context, en
 	return nil, fmt.Errorf("geo for environment with ID %s not found", environmentId)
 }
 
-func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environmentId string, featureName string) (*athena.FeatureDto, error) {
+func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environmentId string, featureName string) (*admin.FeatureDto, error) {
 	org, err := client.GetOrgEnvironmentId(ctx, environmentId)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (client *environmentWaveClient) UpdateFeature(ctx context.Context, environm
 	}
 }
 
-func (client *environmentWaveClient) GetFeature(ctx context.Context, environmentId string, featureName string) (*athena.FeatureDto, error) {
+func (client *environmentWaveClient) GetFeature(ctx context.Context, environmentId string, featureName string) (*admin.FeatureDto, error) {
 	org, err := client.GetOrgEnvironmentId(ctx, environmentId)
 	if err != nil {
 		return nil, err
