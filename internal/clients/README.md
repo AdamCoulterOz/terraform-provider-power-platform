@@ -13,7 +13,8 @@ eventually be published — as a standalone Go client module.
 | `dataverse` | Dataverse Web API (per-environment OData v4) | `{org}.crm.dynamics.com` |
 | `powerapps` | PowerApps API | `api.powerapps.com` |
 | `admin` | Power Platform admin center API | `api.admin.powerplatform.microsoft.com` |
-| `analytics` | Power Platform admin analytics (CS Analytics) API | regional `*.csanalytics.powerplatform.microsoft.com` |
+| `analytics` | Power Platform admin analytics (CS Analytics) API — a separate service from the admin center API | regional `*.csanalytics.powerplatform.microsoft.com` |
+| `synapselink` | Azure Synapse Link for Dataverse — the orchestration service behind Link to Fabric, internally code-named Athena. Reserved; not yet part of this provider. | `athenawebservice.{azureRegionPrefix}{clusterSuffix}.powerapps.com` |
 | `advisor` | PowerApps Advisor API (solution checker) | per-environment runtime endpoint |
 | `copilot` | Copilot Studio API | per-environment runtime endpoint |
 
@@ -28,8 +29,3 @@ Rules:
   policy via PPAPI) belong to the service layer in `internal/services`.
 - Wire DTOs live next to the operations that produce/consume them and are
   exported. Terraform models and DTO↔model conversion stay in the services.
-
-Note: the name `athena` is reserved — internally it is the Synapse Link /
-"Link to Fabric" orchestration service (`athenawebservice.{azureRegionPrefix}{clusterSuffix}.powerapps.com`,
-own token resource), which is not yet part of this provider; it becomes its own
-client package when the fabric-link feature lands.
