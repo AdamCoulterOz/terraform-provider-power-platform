@@ -60,7 +60,7 @@ func TestUnitClientPackagesDoNotImportProviderPlane(t *testing.T) {
 // The allowlist test above walks only this directory and polices *direction*:
 // what a client package may import. It is blind to the opposite mistake, where
 // something outside this tree imports a client package that has been renamed or
-// removed. That is not hypothetical -- renaming the admin centre client from
+// removed. That is not hypothetical -- renaming the admin center client from
 // athena to admin left internal/services/environment_wave importing a package
 // that no longer existed, on six branches, and nothing here failed. The rename
 // was complete inside the directory it touched and stopped at its boundary.
