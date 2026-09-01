@@ -90,8 +90,13 @@ state and `Update` is a scaffold error:
 
 ## Also
 
-`internal/clients/athena` on the `refactor/clients-*` train is the Power Platform
-**admin centre** API (`api.admin.powerplatform.microsoft.com`, `PPAC_SCOPE`), a
-different service that shares the internal code name. When this package is extracted
-into that library it needs a different name — `synapselink` or `fabriclink` — or it
-reproduces exactly the conflation the spec repo untangled.
+The admin centre client (`api.admin.powerplatform.microsoft.com`, `PPAC_SCOPE`) also
+carried the internal code name Athena, for a different service. It was renamed
+`internal/clients/athena` → `internal/clients/admin` in `20e855ee`, so on
+`refactor/clients-integration` the name is free. **The rename did not propagate**: as
+of writing, twenty per-boundary branches still carry `internal/clients/athena`,
+including `refactor/clients-boundaries-base`, which owns the file (`ad3fb32f`). Until
+the rename lands there and is merged forward, every branch PR'd upstream on its own
+reintroduces it. Either way, prefer `synapselink` for this boundary on clarity
+grounds: the service is Synapse Link, and Link to Fabric is one product surface on
+top of it. Three different things in this ecosystem have carried the Athena name.
