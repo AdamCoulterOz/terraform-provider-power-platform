@@ -705,13 +705,6 @@
         },
         {
           "spec": "dataverse",
-          "operation": "users_createApplicationUser",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived"
-        },
-        {
-          "spec": "dataverse",
           "operation": "users_update",
           "entrypoint": "Create",
           "coverage": "partial",
@@ -841,6 +834,13 @@
           "entrypoint": "Update",
           "coverage": "full",
           "grade": "derived"
+        }
+      ],
+      "uncatalogued": [
+        {
+          "reason": "caller-supplied",
+          "count": 1,
+          "note": "The request URL is supplied by the practitioner at run time."
         }
       ]
     },
@@ -1452,10 +1452,26 @@
         },
         {
           "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Create",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironment."
+        },
+        {
+          "spec": "bapi",
           "operation": "enterprisePolicies_linkUnlink",
           "entrypoint": "Delete",
           "coverage": "full",
           "grade": "derived"
+        },
+        {
+          "spec": "bapi",
+          "operation": "environments_get",
+          "entrypoint": "Delete",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironment."
         },
         {
           "spec": "bapi",
@@ -1514,18 +1530,18 @@
         },
         {
           "spec": "bapi",
+          "operation": "locations_list",
+          "entrypoint": "Create",
+          "coverage": "full",
+          "grade": "derived"
+        },
+        {
+          "spec": "bapi",
           "operation": "environments_update",
           "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through updateEnvironmentAiFeaturesWithRetry."
-        },
-        {
-          "spec": "bapi",
-          "operation": "locations_list",
-          "entrypoint": "Create",
-          "coverage": "full",
-          "grade": "derived"
         },
         {
           "spec": "bapi",
@@ -3381,14 +3397,6 @@
       },
       "calls": [
         {
-          "spec": "bapi",
-          "operation": "environmentRoleAssignments_list",
-          "entrypoint": "Create",
-          "coverage": "partial",
-          "grade": "derived",
-          "note": "Reached only through GetEnvironmentUserByAadObjectId."
-        },
-        {
           "spec": "dataverse",
           "operation": "users_list",
           "entrypoint": "Create",
@@ -3438,7 +3446,7 @@
         {
           "spec": "bapi",
           "operation": "environmentRoleAssignments_list",
-          "entrypoint": "Delete",
+          "entrypoint": "Create",
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through GetEnvironmentUserByAadObjectId."
@@ -3469,7 +3477,7 @@
         {
           "spec": "bapi",
           "operation": "environmentRoleAssignments_list",
-          "entrypoint": "Read",
+          "entrypoint": "Delete",
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through GetEnvironmentUserByAadObjectId."
@@ -3492,7 +3500,7 @@
         {
           "spec": "bapi",
           "operation": "environmentRoleAssignments_list",
-          "entrypoint": "Update",
+          "entrypoint": "Read",
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through GetEnvironmentUserByAadObjectId."
@@ -3535,6 +3543,14 @@
           "coverage": "partial",
           "grade": "derived",
           "note": "Reached only through GetDataverseUserBySystemUserId."
+        },
+        {
+          "spec": "bapi",
+          "operation": "environmentRoleAssignments_list",
+          "entrypoint": "Update",
+          "coverage": "partial",
+          "grade": "derived",
+          "note": "Reached only through GetEnvironmentUserByAadObjectId."
         }
       ]
     }
