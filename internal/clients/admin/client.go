@@ -8,18 +8,18 @@ import (
 	"github.com/microsoft/terraform-provider-power-platform/internal/constants"
 )
 
-// Client calls the Power Platform admin centre API. It is a thin,
+// Client calls the Power Platform admin center API. It is a thin,
 // stateless wrapper over the shared transport in internal/clients/api.
 type Client struct {
 	Api *api.Client
 }
 
-// NewClient returns an admin centre client using the given shared transport.
+// NewClient returns an admin center client using the given shared transport.
 func NewClient(apiClient *api.Client) *Client {
 	return &Client{Api: apiClient}
 }
 
-// scopes returns the OAuth scopes used to authenticate admin centre requests.
+// scopes returns the OAuth scopes used to authenticate admin center requests.
 func (client *Client) scopes() []string {
 	return []string{constants.PPAC_SCOPE}
 }
