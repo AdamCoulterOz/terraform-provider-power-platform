@@ -12,7 +12,7 @@ eventually be published — as a standalone Go client module.
 | `ppapi` | Power Platform API | `api.powerplatform.com` |
 | `dataverse` | Dataverse Web API (per-environment OData v4) | `{org}.crm.dynamics.com` |
 | `powerapps` | PowerApps API | `api.powerapps.com` |
-| `athena` | Power Platform admin center API ("Athena") | `api.admin.powerplatform.microsoft.com` |
+| `admin` | Power Platform admin centre API | `api.admin.powerplatform.microsoft.com` |
 | `analytics` | Power Platform admin analytics (CS Analytics) API | regional `*.csanalytics.powerplatform.microsoft.com` |
 | `advisor` | PowerApps Advisor API (solution checker) | per-environment runtime endpoint |
 | `copilot` | Copilot Studio API | per-environment runtime endpoint |

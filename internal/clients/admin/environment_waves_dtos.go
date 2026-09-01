@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-package athena
+package admin
 
 type FeatureDto struct {
 	FeatureName      string `json:"featureName"`
